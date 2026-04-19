@@ -1,0 +1,47 @@
+spring:
+  application:
+    name: petfriendly-backend
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    locations: classpath:db/migration
+
+server:
+  port: ${PORT:8080}
+  servlet:
+    context-path: /
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+petfriendly:
+  jwt:
+    secret: ${JWT_SECRET:petfriendly-dev-secret-key-must-be-at-least-256-bits-long-change-in-prod}
+    expiration-minutes: ${JWT_EXPIRATION_MINUTES:15}
+    refresh-expiration-days: ${JWT_REFRESH_DAYS:7}
+  storage:
+    bucket: ${S3_BUCKET:petfriendly-images}
+    endpoint: ${S3_ENDPOINT:http://localhost:9000}
+    access-key: ${S3_ACCESS_KEY:minio}
+    secret-key: ${S3_SECRET_KEY:minio123}
+
+sentry:
+  dsn: ${SENTRY_DSN:}
+  environment: ${spring.profiles.active:dev}
+  release: ${APP_VERSION:local}
+  traces-sample-rate: ${SENTRY_TRACES_RATE:0.1}
+  enable-tracing: true
+  ignored-exceptions-for-type:
+    - org.springframework.security.access.AccessDeniedException
+    - lns.back.backend_pet_friendly.web.exception.ResourceNotFoundException
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
