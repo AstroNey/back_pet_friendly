@@ -9,7 +9,6 @@ import org.mapstruct.Mapping;
 public interface PlaceMapper {
     @Mapping(target = "latitude",  source = "coordinates.latitude")
     @Mapping(target = "longitude", source = "coordinates.longitude")
-    @Mapping(target = "reviews",   ignore = true)
     PlaceJpaEntity toEntity(Place place);
 
     @Mapping(target = "coordinates", expression = "java(new lns.back.backend_pet_friendly.domain.model.Coordinates(entity.getLatitude() != null ? entity.getLatitude() : 0.0, entity.getLongitude() != null ? entity.getLongitude() : 0.0))")

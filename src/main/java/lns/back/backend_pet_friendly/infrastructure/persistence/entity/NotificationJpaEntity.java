@@ -18,6 +18,6 @@ public class NotificationJpaEntity {
     @Column(nullable = false) String title;
     String body;
     @Builder.Default boolean read = false;
-    @JdbcTypeCode(SqlTypes.JSON) @Column(columnDefinition = "jsonb") Map<String, Object> payload;
+    @JdbcTypeCode(SqlTypes.JSON) @Column(columnDefinition = "text") Map<String, Object> payload;
     @Builder.Default Instant createdAt = Instant.now();
 }

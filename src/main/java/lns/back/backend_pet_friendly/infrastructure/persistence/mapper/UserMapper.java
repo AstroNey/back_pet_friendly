@@ -7,6 +7,7 @@ import org.mapstruct.Mapping;
 @Mapper(componentModel = "spring")
 public interface UserMapper {
     @Mapping(target = "passwordHash", source = "passwordHash")
+    @Mapping(target = "updatedAt", ignore = true)
     UserJpaEntity toEntity(User user);
     User toDomain(UserJpaEntity entity);
 }

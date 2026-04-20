@@ -18,7 +18,7 @@ public class UserJpaEntity {
     @Column(nullable = false) String passwordHash;
     @Column(nullable = false) String name;
     String avatarUrl;
-    @JdbcTypeCode(SqlTypes.ARRAY) @Column(columnDefinition = "text[]") @Builder.Default List<String> pets = new ArrayList<>();
+    @JdbcTypeCode(SqlTypes.JSON) @Column(columnDefinition = "text") @Builder.Default List<String> pets = new ArrayList<>();
     @Builder.Default boolean enabled = true;
     @Builder.Default Instant createdAt = Instant.now();
     @Builder.Default Instant updatedAt = Instant.now();

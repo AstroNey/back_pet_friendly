@@ -24,11 +24,11 @@ public class PlaceJpaEntity {
     Double longitude;
     @Builder.Default double rating = 0.0;
     @Builder.Default int reviewCount = 0;
-    @JdbcTypeCode(SqlTypes.ARRAY) @Column(columnDefinition = "varchar(20)[]") @Builder.Default List<AnimalType> animals = new ArrayList<>();
+    @JdbcTypeCode(SqlTypes.JSON) @Column(columnDefinition = "text") @Builder.Default List<AnimalType> animals = new ArrayList<>();
     String imageUrl;
-    @JdbcTypeCode(SqlTypes.ARRAY) @Column(columnDefinition = "text[]") @Builder.Default List<String> galleryUrls = new ArrayList<>();
+    @JdbcTypeCode(SqlTypes.JSON) @Column(columnDefinition = "text") @Builder.Default List<String> galleryUrls = new ArrayList<>();
     @Column(columnDefinition = "TEXT") String description;
-    @JdbcTypeCode(SqlTypes.JSON) @Column(columnDefinition = "jsonb") Map<String, String> hours;
+    @JdbcTypeCode(SqlTypes.JSON) @Column(columnDefinition = "text") Map<String, String> hours;
     UUID ownerId;
     @Builder.Default Instant createdAt = Instant.now();
     @Builder.Default Instant updatedAt = Instant.now();
