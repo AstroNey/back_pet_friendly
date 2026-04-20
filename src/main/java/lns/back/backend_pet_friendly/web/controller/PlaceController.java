@@ -1,4 +1,5 @@
 package lns.back.backend_pet_friendly.web.controller;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lns.back.backend_pet_friendly.domain.model.Coordinates;
 import lns.back.backend_pet_friendly.domain.model.AnimalType;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+@Tag(name = "Places", description = "Browse, create, update and search pet-friendly places")
 @RestController @RequestMapping("/api/v1/places") @RequiredArgsConstructor
 public class PlaceController {
     private final PlaceUseCase placeUseCase;

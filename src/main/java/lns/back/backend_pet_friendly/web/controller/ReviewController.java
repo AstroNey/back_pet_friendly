@@ -1,4 +1,5 @@
 package lns.back.backend_pet_friendly.web.controller;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lns.back.backend_pet_friendly.domain.port.in.ReviewUseCase;
 import lns.back.backend_pet_friendly.web.dto.request.CreateReviewRequest;
@@ -11,6 +12,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
+@Tag(name = "Reviews", description = "Reviews left on places")
 @RestController @RequestMapping("/api/v1") @RequiredArgsConstructor
 public class ReviewController {
     private final ReviewUseCase reviewUseCase;

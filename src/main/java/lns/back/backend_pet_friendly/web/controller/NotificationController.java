@@ -1,4 +1,5 @@
 package lns.back.backend_pet_friendly.web.controller;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lns.back.backend_pet_friendly.domain.port.in.NotificationUseCase;
 import lns.back.backend_pet_friendly.web.dto.response.NotificationResponse;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+@Tag(name = "Notifications", description = "In-app notifications for the current user")
 @RestController @RequestMapping("/api/v1/notifications") @RequiredArgsConstructor
 public class NotificationController {
     private final NotificationUseCase notificationUseCase;

@@ -1,6 +1,9 @@
 spring:
   application:
     name: petfriendly-backend
+  threads:
+    virtual:
+      enabled: true
   jpa:
     hibernate:
       ddl-auto: validate

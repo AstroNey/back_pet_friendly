@@ -18,12 +18,12 @@ public class JwtTokenAdapter implements TokenPort {
     private SecretKey key() { return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8)); }
 
     @Override public String generateAccessToken(UUID userId, String email) {
-        return Jwts.builder().subject(userId.toString()).claim("email", email)
+        return Jwts.builder().id(UUID.randomUUID().toString()).subject(userId.toString()).claim("email", email)
                 .issuedAt(new Date()).expiration(new Date(System.currentTimeMillis() + (long)accessMinutes * 60_000))
                 .signWith(key()).compact();
     }
     @Override public String generateRefreshToken(UUID userId) {
-        return Jwts.builder().subject(userId.toString()).claim("type","refresh")
+        return Jwts.builder().id(UUID.randomUUID().toString()).subject(userId.toString()).claim("type","refresh")
                 .issuedAt(new Date()).expiration(new Date(System.currentTimeMillis() + (long)refreshDays * 86_400_000))
                 .signWith(key()).compact();
     }

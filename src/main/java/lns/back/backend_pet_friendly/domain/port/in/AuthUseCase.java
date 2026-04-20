@@ -13,4 +13,5 @@ public interface AuthUseCase {
     AuthResult register(RegisterCommand command);
     AuthResult login(String email, String password);
     AuthResult refresh(String refreshToken);
+    void logout(String refreshToken);
 }

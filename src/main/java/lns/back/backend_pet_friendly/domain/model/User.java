@@ -17,6 +17,7 @@ public class User {
     private String passwordHash;
     private String name;
     private String avatarUrl;
+    private String fcmToken;
 
     @Builder.Default
     private List<String> pets = new ArrayList<>();

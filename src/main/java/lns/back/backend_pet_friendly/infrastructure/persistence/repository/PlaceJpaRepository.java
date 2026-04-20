@@ -16,4 +16,44 @@ public interface PlaceJpaRepository extends JpaRepository<PlaceJpaEntity, UUID> 
 
     @Query("SELECT p FROM PlaceJpaEntity p JOIN FavoriteJpaEntity f ON f.id.placeId = p.id WHERE f.id.userId = :userId")
     List<PlaceJpaEntity> findFavoritesByUserId(@Param("userId") UUID userId);
+
+    /**
+     * PostGIS-native geospatial search — only works against a PostgreSQL instance with the postgis extension.
+     * Filters by radius (metres), optional type, optional text, ordered by distance ascending.
+     */
+    @Query(value = """
+            SELECT * FROM places p
+            WHERE ST_DWithin(
+                ST_SetSRID(ST_MakePoint(p.longitude, p.latitude), 4326)::geography,
+                ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography,
+                :radiusMeters
+            )
+              AND (CAST(:type AS text) IS NULL OR p.type = CAST(:type AS text))
+              AND (CAST(:text AS text) IS NULL
+                   OR LOWER(p.name)    LIKE LOWER('%' || CAST(:text AS text) || '%')
+                   OR LOWER(p.address) LIKE LOWER('%' || CAST(:text AS text) || '%'))
+            ORDER BY ST_Distance(
+                ST_SetSRID(ST_MakePoint(p.longitude, p.latitude), 4326)::geography,
+                ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography
+            ) ASC
+            """,
+            countQuery = """
+            SELECT COUNT(*) FROM places p
+            WHERE ST_DWithin(
+                ST_SetSRID(ST_MakePoint(p.longitude, p.latitude), 4326)::geography,
+                ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography,
+                :radiusMeters
+            )
+              AND (CAST(:type AS text) IS NULL OR p.type = CAST(:type AS text))
+              AND (CAST(:text AS text) IS NULL
+                   OR LOWER(p.name)    LIKE LOWER('%' || CAST(:text AS text) || '%')
+                   OR LOWER(p.address) LIKE LOWER('%' || CAST(:text AS text) || '%'))
+            """,
+            nativeQuery = true)
+    Page<PlaceJpaEntity> searchNearby(@Param("lat") double lat,
+                                      @Param("lng") double lng,
+                                      @Param("radiusMeters") double radiusMeters,
+                                      @Param("type") String type,
+                                      @Param("text") String text,
+                                      Pageable pageable);
 }

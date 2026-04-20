@@ -131,6 +131,13 @@
             <version>${sentry.version}</version>
         </dependency>
 
+        <!-- ── Firebase (FCM push notifications) ──────────────────────────── -->
+        <dependency>
+            <groupId>com.google.firebase</groupId>
+            <artifactId>firebase-admin</artifactId>
+            <version>9.4.1</version>
+        </dependency>
+
         <!-- ── Tests ──────────────────────────────────────────────────────── -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

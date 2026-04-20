@@ -50,4 +50,11 @@ public class UserService implements UserUseCase {
         userRepository.save(user);
         return url;
     }
+
+    @Override
+    public void updateFcmToken(UUID id, String fcmToken) {
+        User user = getById(id);
+        user.setFcmToken(fcmToken);
+        userRepository.save(user);
+    }
 }

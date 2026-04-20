@@ -15,4 +15,5 @@ public interface UserUseCase {
     User updateProfile(UUID id, UpdateProfileCommand command);
     UserStats getStats(UUID id);
     String uploadAvatar(UUID id, byte[] data, String filename, String contentType);
+    void updateFcmToken(UUID id, String fcmToken);
 }

@@ -8,10 +8,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 import java.util.Map;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -95,5 +97,56 @@ class AuthControllerIT {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(body)))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void refresh_validToken_issuesNewPairAndRevokesOld() throws Exception {
+        String email = "ref-" + UUID.randomUUID() + "@test.com";
+        MvcResult reg = mockMvc.perform(post("/api/v1/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of("email", email, "password", "password123", "name", "Ref"))))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String refresh = objectMapper.readTree(reg.getResponse().getContentAsString()).get("refreshToken").asText();
+
+        MvcResult res = mockMvc.perform(post("/api/v1/auth/refresh").param("refreshToken", refresh))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token", not(emptyString())))
+                .andExpect(jsonPath("$.refreshToken", not(emptyString())))
+                .andReturn();
+        String rotated = objectMapper.readTree(res.getResponse().getContentAsString()).get("refreshToken").asText();
+        assertThat(rotated).isNotEqualTo(refresh);
+
+        mockMvc.perform(post("/api/v1/auth/refresh").param("refreshToken", refresh))
+                .andExpect(status().is4xxClientError());
+    }
+
+    @Test
+    void refresh_invalidToken_returns4xx() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/refresh").param("refreshToken", "definitely-not-a-jwt"))
+                .andExpect(status().is4xxClientError());
+    }
+
+    @Test
+    void logout_thenRefresh_fails() throws Exception {
+        String email = "out-" + UUID.randomUUID() + "@test.com";
+        MvcResult reg = mockMvc.perform(post("/api/v1/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of("email", email, "password", "password123", "name", "Out"))))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String refresh = objectMapper.readTree(reg.getResponse().getContentAsString()).get("refreshToken").asText();
+
+        mockMvc.perform(post("/api/v1/auth/logout").param("refreshToken", refresh))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(post("/api/v1/auth/refresh").param("refreshToken", refresh))
+                .andExpect(status().is4xxClientError());
+    }
+
+    @Test
+    void logout_unknownToken_stillReturnsNoContent() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/logout").param("refreshToken", "unknown-token"))
+                .andExpect(status().isNoContent());
     }
 }

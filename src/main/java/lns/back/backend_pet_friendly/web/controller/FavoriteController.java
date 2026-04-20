@@ -1,4 +1,5 @@
 package lns.back.backend_pet_friendly.web.controller;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lns.back.backend_pet_friendly.domain.port.in.FavoriteUseCase;
 import lns.back.backend_pet_friendly.web.dto.response.PlaceResponse;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+@Tag(name = "Favorites", description = "Manage the current user's favorite places")
 @RestController @RequestMapping("/api/v1/users/favorites") @RequiredArgsConstructor
 public class FavoriteController {
     private final FavoriteUseCase favoriteUseCase;
