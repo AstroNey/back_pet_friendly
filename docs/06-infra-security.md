@@ -1,203 +1,132 @@
-# Module : Infrastructure — Sécurité
+# Infrastructure — Sécurité
 
-Chemin : `infrastructure/security/`
+Chemin : `infrastructure/security/` + table `refresh_tokens` côté persistence.
 
 ## Vue d'ensemble
 
 ```
 Requête HTTP
-    │
     ▼
-JwtAuthFilter              → extrait le Bearer token, valide, peuple SecurityContext
-    │
+JwtAuthFilter        → extrait Bearer, valide, peuple SecurityContext
     ▼
-SecurityConfig             → définit quelles routes sont publiques / protégées
-    │
+SecurityConfig       → définit routes publiques / protégées
     ▼
-Controller                 → @AuthenticationPrincipal extrait l'userId du contexte
+Controller           → @AuthenticationPrincipal extrait userId
 ```
 
----
-
-## `SecurityConfig.java`
-
-Configuration centrale de Spring Security.
+## SecurityConfig
 
 ```java
 @Configuration @EnableWebSecurity
 public class SecurityConfig {
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(12);  // coût 12 = ~250ms/hash
+    @Bean public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder(12);   // ~250 ms / hash
     }
 
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    @Bean public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         return http
-            .csrf(csrf -> csrf.disable())             // API stateless, pas de CSRF
+            .csrf(c -> c.disable())
             .sessionManagement(s -> s.sessionCreationPolicy(STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/v1/auth/**").permitAll()    // login/register libre
-                .requestMatchers(GET, "/api/v1/places/**").permitAll()  // consultation libre
-                .anyRequest().authenticated()
-            )
+                .requestMatchers("/api/v1/auth/**").permitAll()
+                .requestMatchers(GET, "/api/v1/places/**").permitAll()
+                .requestMatchers("/swagger-ui/**", "/api-docs/**", "/h2-console/**").permitAll()
+                .anyRequest().authenticated())
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
             .build();
     }
 }
 ```
 
-**BCrypt coût 12 :** intentionnellement lent. Un attaquant avec la base de données ne peut pas tester des millions de mots de passe par seconde.
+BCrypt strength **12** (intentionnellement lent contre le brute-force offline).
 
----
+## Tokens — access + refresh avec rotation
 
-## `JwtTokenAdapter.java`
+Deux tokens issus à login/register/refresh :
 
-Implémente `TokenPort` (port OUT du domaine) avec la bibliothèque `jjwt`.
+| Token | TTL | Stockage | Usage |
+|-------|-----|----------|-------|
+| Access | 15 min (900 s) | Client uniquement | Header `Authorization: Bearer ...` à chaque requête |
+| Refresh | 7 jours | **Hash SHA-256 en DB** + JWT côté client | POST `/auth/refresh` pour obtenir un nouveau access |
+
+`AuthService.issueTokens()` :
+1. Génère `access` JWT (subject=userId, claim `email`, exp 15 min)
+2. Génère `refresh` JWT (subject=userId, claim `type=refresh`, exp 7 j)
+3. **Hash le refresh** avec `TokenHasher.sha256(refresh)` et persiste un `RefreshToken{userId, tokenHash, expiresAt}`
+4. Retourne les deux tokens en clair au client
+
+## Rotation à chaque refresh
+
+`POST /api/v1/auth/refresh` :
+1. Valide la signature + expiration JWT via `TokenPort.isValid()`
+2. SHA-256 du refresh → cherche le `RefreshToken` correspondant en DB
+3. Vérifie `isActive()` (non révoqué, non expiré)
+4. **Révoque** l'ancien (`revokedAt = now`)
+5. Émet une nouvelle paire access + refresh, persiste le nouveau hash
+
+Conséquence : un refresh token volé devient inutile dès que le légitime utilisateur s'en sert. Replay détecté côté DB.
+
+## Logout
+
+`POST /api/v1/auth/logout` : SHA-256 du refresh fourni, marque `revokedAt` en DB. Le JWT côté client reste valide cryptographiquement, mais il est rejeté à la prochaine tentative de refresh.
+
+## JwtTokenAdapter — implémentation
+
+Implémente `TokenPort` (port OUT du domaine) avec `jjwt 0.12.6`.
 
 ```java
 @Component
 public class JwtTokenAdapter implements TokenPort {
 
-    private static final long ACCESS_EXPIRY  = 15 * 60 * 1000;        // 15 min
-    private static final long REFRESH_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 jours
-
-    @Override
-    public String generateAccessToken(UUID userId) {
+    @Override public String generateAccessToken(UUID userId, String email) {
         return Jwts.builder()
             .subject(userId.toString())
-            .expiration(new Date(System.currentTimeMillis() + ACCESS_EXPIRY))
+            .claim("email", email)
+            .expiration(new Date(now() + 15 * 60_000))
             .signWith(secretKey)
             .compact();
     }
 
-    @Override
-    public UUID extractUserId(String token) {
-        return UUID.fromString(
-            Jwts.parser().verifyWith(secretKey).build()
-                .parseSignedClaims(token).getPayload().getSubject()
-        );
-    }
+    @Override public UUID extractUserId(String token) { /* parseSignedClaims */ }
+    @Override public boolean isValid(String token) { /* try-catch parse */ }
 }
 ```
 
-Le `userId` est le **subject** du JWT. Le token ne contient pas l'email ou le rôle — juste l'UUID. Toute information supplémentaire nécessite un aller-retour BDD.
+Le `userId` est le subject. Le claim `email` évite un round-trip BDD pour les logs/audit. Le token est **signé non chiffré** : ne rien y mettre de sensible.
 
-**Access vs Refresh token :**
-- **Access token (15 min)** : envoyé à chaque requête, durée courte pour limiter l'exposition.
-- **Refresh token (7 jours)** : stocké côté client, utilisé uniquement sur `/auth/refresh` pour obtenir un nouveau access token sans re-login.
+## JwtAuthFilter
 
----
-
-## `JwtAuthFilter.java`
-
-Filtre exécuté avant chaque requête HTTP protégée.
+`OncePerRequestFilter` qui peuple le `SecurityContext` si un Bearer valide est présent. **Ne bloque pas** les requêtes sans token — c'est `SecurityConfig` qui décide qui est protégé.
 
 ```java
-@Component @RequiredArgsConstructor
-public class JwtAuthFilter extends OncePerRequestFilter {
-
-    private final JwtTokenAdapter tokenAdapter;
-    private final UserDetailsServiceAdapter userDetailsService;
-
-    @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain chain) {
-
-        String authHeader = request.getHeader("Authorization");
-
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            chain.doFilter(request, response);  // pas de token → next filter
-            return;
-        }
-
-        String token = authHeader.substring(7);
-
-        if (tokenAdapter.isValid(token)) {
-            UUID userId = tokenAdapter.extractUserId(token);
-            UserDetails userDetails = userDetailsService.loadUserByUsername(userId.toString());
-
-            UsernamePasswordAuthenticationToken auth =
-                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-
-            SecurityContextHolder.getContext().setAuthentication(auth);
-        }
-
-        chain.doFilter(request, response);
-    }
+String token = authHeader.substring(7);
+if (tokenAdapter.isValid(token)) {
+    UUID userId = tokenAdapter.extractUserId(token);
+    UserDetails details = userDetailsService.loadUserByUsername(userId.toString());
+    SecurityContextHolder.getContext().setAuthentication(
+        new UsernamePasswordAuthenticationToken(details, null, details.getAuthorities()));
 }
+chain.doFilter(request, response);
 ```
 
-Ce filtre **ne bloque pas** les requêtes sans token — il peuple juste le `SecurityContext` si un token valide est présent. C'est `SecurityConfig` qui bloque les routes protégées si le contexte est vide.
+## UserDetailsServiceAdapter
 
----
+Pont Spring Security ↔ `UserJpaRepository`. Charge l'utilisateur par UUID (pas par email — le JWT subject est l'UUID), retourne un `UserDetails` avec rôle `ROLE_USER`.
 
-## `UserDetailsServiceAdapter.java`
-
-Pont entre Spring Security et notre `UserRepository`.
-
-```java
-@Component @RequiredArgsConstructor
-public class UserDetailsServiceAdapter implements UserDetailsService {
-
-    private final UserJpaRepository userJpaRepository;
-
-    @Override
-    public UserDetails loadUserByUsername(String userId) {
-        UserJpaEntity user = userJpaRepository.findById(UUID.fromString(userId))
-            .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-
-        return org.springframework.security.core.userdetails.User
-            .withUsername(userId)
-            .password(user.getPasswordHash())
-            .authorities("ROLE_USER")
-            .build();
-    }
-}
-```
-
----
-
-## Utiliser l'utilisateur courant dans un contrôleur
+## Récupérer l'utilisateur dans un controller
 
 ```java
 @GetMapping("/me")
-public UserResponse getMe(@AuthenticationPrincipal UserDetails userDetails) {
-    UUID userId = UUID.fromString(userDetails.getUsername());
+public UserResponse me(@AuthenticationPrincipal UserDetails details) {
+    UUID userId = UUID.fromString(details.getUsername());
     return UserResponse.from(userUseCase.getById(userId));
 }
 ```
 
-`@AuthenticationPrincipal` extrait le `UserDetails` du `SecurityContext` peuplé par `JwtAuthFilter`. Le contrôleur n'a jamais besoin de parser le token lui-même.
-
----
-
-## Flux complet d'une requête authentifiée
-
-```
-Client
-  │  Authorization: Bearer eyJhbGci...
-  ▼
-JwtAuthFilter
-  ├── extrait le token
-  ├── valide la signature + expiration
-  ├── extrait userId du subject
-  ├── charge UserDetails depuis BDD
-  └── peuple SecurityContextHolder
-  ▼
-SecurityConfig.filterChain
-  └── vérifie que SecurityContext n'est pas vide → OK
-  ▼
-Controller
-  └── @AuthenticationPrincipal UserDetails → userId disponible
-```
-
----
-
 ## À retenir
 
-- Le token JWT est **signé mais pas chiffré** : son contenu est lisible (base64). Ne jamais y mettre de données sensibles.
-- Spring Security est **stateless** ici : aucune session HTTP. Chaque requête est autonome.
-- La durée courte du access token (15 min) force le client à utiliser le refresh token régulièrement, ce qui permet de révoquer un accès en invalidant le refresh token côté serveur (à implémenter si besoin).
+- Le JWT est **signé, pas chiffré** : contenu lisible en base64. Aucune donnée sensible.
+- API **stateless** : zéro session HTTP, chaque requête autonome.
+- **Rotation systématique** des refresh tokens à chaque usage : sécurité contre le replay.
+- Configuration TTL : pour l'instant **hardcodé** dans `AuthService` (`ACCESS_TOKEN_TTL_SECONDS = 900`, `REFRESH_TOKEN_TTL_DAYS = 7`). À déplacer vers `application.yml` (`petfriendly.jwt.expiration-minutes`, `petfriendly.jwt.refresh-expiration-days`) si besoin de variabilité par environnement.

@@ -72,4 +72,23 @@ class FavoriteServiceTest {
         when(favoriteRepository.exists(userId, place.getId())).thenReturn(true);
         assertThat(favoriteService.isFavorite(userId, place.getId())).isTrue();
     }
+
+    @Test
+    void remove_whenFavorite_removes() {
+        when(favoriteRepository.exists(userId, place.getId())).thenReturn(true);
+
+        favoriteService.remove(userId, place.getId());
+
+        verify(favoriteRepository).remove(userId, place.getId());
+    }
+
+    @Test
+    void remove_whenNotFavorite_isNoOp() {
+        when(favoriteRepository.exists(userId, place.getId())).thenReturn(false);
+
+        favoriteService.remove(userId, place.getId());
+
+        verify(favoriteRepository, never()).remove(any(), any());
+        verify(favoriteRepository, never()).add(any(), any());
+    }
 }

@@ -116,6 +116,36 @@ class ReviewAndFavoriteControllerIT {
     }
 
     @Test
+    void deleteFavorite_isIdempotent() throws Exception {
+        mockMvc.perform(post("/api/v1/users/favorites/" + placeId)
+                .header("Authorization", "Bearer " + token))
+                .andExpect(status().is2xxSuccessful());
+
+        mockMvc.perform(get("/api/v1/users/favorites")
+                .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].id", hasItem(placeId)));
+
+        mockMvc.perform(delete("/api/v1/users/favorites/" + placeId)
+                .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/v1/users/favorites")
+                .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].id", not(hasItem(placeId))));
+
+        mockMvc.perform(delete("/api/v1/users/favorites/" + placeId)
+                .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/v1/users/favorites")
+                .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].id", not(hasItem(placeId))));
+    }
+
+    @Test
     void deleteOwnReview_succeeds() throws Exception {
         MvcResult res = mockMvc.perform(post("/api/v1/places/" + placeId + "/reviews")
                 .header("Authorization", "Bearer " + token)

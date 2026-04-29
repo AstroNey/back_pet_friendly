@@ -1,4 +1,7 @@
 package lns.back.backend_pet_friendly.web.controller;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lns.back.backend_pet_friendly.domain.port.in.UserUseCase;
@@ -17,6 +20,12 @@ import java.util.UUID;
 public class UserController {
     private final UserUseCase userUseCase;
 
+    @Operation(summary = "Get current user profile",
+        description = "Returns the authenticated user's profile plus aggregated stats: reviewsWritten, favoritesCount, placesAdded.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Profile and stats"),
+        @ApiResponse(responseCode = "401", description = "Missing or invalid JWT")
+    })
     @GetMapping("/me")
     public ResponseEntity<Map<String, Object>> me(@AuthenticationPrincipal UserDetails user) {
         UUID id = UUID.fromString(user.getUsername());
@@ -28,6 +37,12 @@ public class UserController {
             "stats", Map.of("reviewsWritten", stats.reviewsWritten(), "favoritesCount", stats.favoritesCount(), "placesAdded", stats.placesAdded())));
     }
 
+    @Operation(summary = "Update current user profile", description = "Updates name and pets list.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Profile updated"),
+        @ApiResponse(responseCode = "400", description = "Invalid payload"),
+        @ApiResponse(responseCode = "401", description = "Missing or invalid JWT")
+    })
     @PutMapping("/me")
     public ResponseEntity<UserResponse> update(@Valid @RequestBody UpdateProfileRequest req, @AuthenticationPrincipal UserDetails user) {
         UUID id = UUID.fromString(user.getUsername());

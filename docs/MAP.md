@@ -1,0 +1,113 @@
+# MAP — Concept → fichier:ligne
+
+Index alphabétique-fonctionnel des concepts non-triviaux du projet. Évite les `Grep` répétitifs pour retrouver "où est X". Tous les paths sont relatifs à la racine du repo.
+
+> **Maintenance** : à mettre à jour quand un concept listé change de location ou qu'un nouveau concept non-trivial apparaît. Ne pas indexer les CRUD basiques (déjà couverts par les conventions de nommage).
+
+---
+
+## Auth & sécurité
+
+| Concept | Fichier:ligne | Détail |
+|---|---|---|
+| Issue tokens (access + refresh) | `domain/service/AuthService.java:89` | `issueTokens` — génère JWT access (15 min, claim email) + refresh (7 j) + persiste hash |
+| Refresh token rotation | `domain/service/AuthService.java:57` | Valide JWT, lookup hash, révoque l'ancien (`revokedAt`), émet nouvelle paire |
+| Logout (révocation) | `domain/service/AuthService.java:78` | Marque `revokedAt` sur le hash en DB |
+| SHA-256 du refresh | `domain/service/TokenHasher.java:11` | Hash hex stocké en DB, jamais le token en clair |
+| Generate access token | `infrastructure/security/JwtTokenAdapter.java:20` | jjwt, subject=userId, claim email, exp 15 min |
+| Generate refresh token | `infrastructure/security/JwtTokenAdapter.java:25` | jjwt, claim type=refresh, exp 7 j |
+| JWT validation | `infrastructure/security/JwtTokenAdapter.java:33` | `isValid` — try/catch parseSignedClaims |
+| Extract userId from JWT | `infrastructure/security/JwtTokenAdapter.java:30` | `extractUserId` — UUID depuis subject |
+| BCrypt configuration | `infrastructure/security/SecurityConfig.java:24` | `BCryptPasswordEncoder(12)` — strength 12, ~250 ms/hash |
+| SecurityFilterChain (routes) | `infrastructure/security/SecurityConfig.java:29` | Routes publiques : `/auth/**`, GET `/places/**`, Swagger, h2-console |
+| JWT filter doFilterInternal | `infrastructure/security/JwtAuthFilter.java:24` | Parse Bearer, valide, peuple SecurityContext |
+| Load user by id | `infrastructure/security/UserDetailsServiceAdapter.java:21` | Bridge UserRepository → Spring Security `UserDetails` |
+| RefreshToken.isActive | `domain/model/RefreshToken.java:30` | `!isRevoked() && !isExpired()` |
+
+## Domaine — règles métier
+
+| Concept | Fichier:ligne | Détail |
+|---|---|---|
+| 1 review par user et par place | `domain/service/ReviewService.java:37` | Check `existsByPlaceIdAndAuthorId` avant création |
+| Author-only delete review | `domain/service/ReviewService.java:63` | Lance `AccessDeniedException` si `authorId != requesterId` |
+| Owner-only update place | `domain/service/PlaceService.java:52` | Voir condition d'ownership |
+| Place : recalcul rating | `domain/model/Place.java:49` | `addReview` met à jour rating + reviewCount |
+| Coordinates validation | `domain/model/Coordinates.java:5` | Compact constructor, lat ∈ [-90,90], lng ∈ [-180,180] |
+| Distance Haversine | `domain/model/Coordinates.java:11` | `distanceTo(other)` en km |
+| Email unicité | `domain/service/AuthService.java:32` | Check `existsByEmail` au register |
+| Toggle favori | `domain/service/FavoriteService.java:26` | Add si absent, remove sinon |
+| User stats | `domain/service/UserService.java:39` | Agrège reviewsWritten + favoritesCount + placesAdded |
+| Notification create | `domain/service/NotificationService.java:30` | Persiste + pousse via `NotificationSenderPort` |
+
+## Persistence
+
+| Concept | Fichier:ligne | Détail |
+|---|---|---|
+| Recherche JPQL (LIKE) | `infrastructure/persistence/repository/PlaceJpaRepository.java:15` | Fallback sans géoloc — name + address + type |
+| Recherche PostGIS native | `infrastructure/persistence/repository/PlaceJpaRepository.java:53` | `ST_DWithin` + `ST_Distance` ordré par distance |
+| Favoris d'un user | `infrastructure/persistence/repository/PlaceJpaRepository.java:18` | JOIN `FavoriteJpaEntity` sur `(userId, placeId)` |
+| Migration init | `src/main/resources/db/migration/V1__init_schema.sql` | Extensions UUID-OSSP + PostGIS, toutes tables, GIN FR sur `places.name` |
+
+## Mapping & ports
+
+| Concept | Fichier:ligne | Détail |
+|---|---|---|
+| TokenPort interface | `domain/port/out/TokenPort.java:6` | 4 méthodes — generateAccess(uid, email), generateRefresh(uid), extractUserId, isValid |
+| FileStoragePort interface | `domain/port/out/FileStoragePort.java:4` | 2 méthodes — upload, delete |
+| NotificationSenderPort interface | `domain/port/out/NotificationSenderPort.java:12` | `sendPush(uid, title, body, data)` |
+| Mapping Coordinates ↔ lat/lng | `infrastructure/persistence/mapper/PlaceMapper.java` | `@Mapping` source/target sur `coordinates.latitude` etc. |
+
+## Infra technique
+
+| Concept | Fichier:ligne | Détail |
+|---|---|---|
+| S3 init avec fallback | `infrastructure/storage/S3FileStorageAdapter.java:45` | `@PostConstruct`, dégradation graceful si MinIO indispo |
+| S3 upload + sanitize | `infrastructure/storage/S3FileStorageAdapter.java:61` | UUID prefix + regex sanitization |
+| FCM no-op fallback | `infrastructure/notification/FcmNotificationAdapter.java:39` | `firebaseMessaging == null` → log debug only |
+| Firebase config | `infrastructure/notification/FirebaseConfig.java` | Lit `petfriendly.firebase.service-account-file`, ne crée pas le bean si vide |
+
+## Web layer
+
+| Concept | Fichier:ligne | Détail |
+|---|---|---|
+| OpenAPI bean (Swagger) | `config/OpenApiConfig.java:22` | Bearer JWT scheme, servers (local + prod), tags |
+| Auth controller | `web/controller/AuthController.java:24-46` | register/login/refresh/logout — `@SecurityRequirements` (public) |
+| Place controller | `web/controller/PlaceController.java:32-104` | list, search (PostGIS), getById, create/update/delete |
+| Review controller | `web/controller/ReviewController.java:27-54` | byPlace, create, delete |
+| Favorite controller | `web/controller/FavoriteController.java:25-42` | get, toggle, remove |
+| Notification controller | `web/controller/NotificationController.java:23-55` | list, markRead, delete, clearAll |
+| User controller | `web/controller/UserController.java:24-47` | me (profil + stats), update |
+
+## Bootstrapping & config
+
+| Concept | Fichier:ligne | Détail |
+|---|---|---|
+| Seeded users + places | `config/DataSeeder.java:21` | Idempotent : skip si admin existe ; admin/user + 2 places Paris |
+| Profile dev (H2) | `src/main/resources/application-dev.yml` | H2 mémoire, Flyway off, ddl-auto create-drop, h2-console |
+| Profile prod (PostgreSQL) | `src/main/resources/application-prod.yml` | PG via DATABASE_URL, Hikari 10/2, Flyway validate |
+| Application base config | `src/main/resources/application.yml` | Virtual threads on, Springdoc paths, JWT/storage env vars |
+
+## Tests
+
+| Concept | Fichier:ligne | Détail |
+|---|---|---|
+| ArchUnit — domain isolation | `src/test/java/.../ArchitectureTest.java:11` | `domain` ne dépend pas de `infrastructure`, `web`, `config` |
+| ArchUnit — controllers indep | `src/test/java/.../ArchitectureTest.java:17` | Controllers ne s'appellent pas entre eux |
+| ArchUnit — domain.service deps | `src/test/java/.../ArchitectureTest.java:22` | Whitelist : domain, java, slf4j, @Service/@Component, Spring Security, Pageable, Lombok |
+| Testcontainers PG+PostGIS base | `src/test/java/.../integration/PostgresTestcontainersBase.java` | Singleton container, skip si Docker indispo |
+
+## Build
+
+| Concept | Fichier:ligne | Détail |
+|---|---|---|
+| OpenAPI snapshot generation | `pom.xml` (profile `generate-openapi`) | Démarre app sur 8095 → scrape `/api-docs` → écrit `openapi.json` racine |
+| Annotation processing | `pom.xml` (`annotationProcessorPaths`) | MapStruct + Lombok + lombok-mapstruct-binding 0.2.0 |
+| JaCoCo exclusions | `pom.xml` (jacoco plugin config) | Exclut entities, DTOs, Application, @Configuration |
+
+---
+
+## Comment l'utiliser efficacement (Claude side)
+
+1. Pour une question "où est X", chercher d'abord dans cette table avant de gréper.
+2. Le file:line peut bouger d'une session à l'autre (refacto, ajout de méthode) — vérifier avec un `Read` ciblé sur la zone si la ligne semble fausse.
+3. Si un concept manque ici alors qu'il devrait y être, l'ajouter immédiatement après l'avoir trouvé.

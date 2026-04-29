@@ -34,6 +34,13 @@ public class FavoriteService implements FavoriteUseCase {
     }
 
     @Override
+    public void remove(UUID userId, UUID placeId) {
+        if (favoriteRepository.exists(userId, placeId)) {
+            favoriteRepository.remove(userId, placeId);
+        }
+    }
+
+    @Override
     public boolean isFavorite(UUID userId, UUID placeId) {
         return favoriteRepository.exists(userId, placeId);
     }

@@ -8,5 +8,6 @@ import java.util.UUID;
 public interface FavoriteUseCase {
     List<Place> getUserFavorites(UUID userId);
     void toggle(UUID userId, UUID placeId);
+    void remove(UUID userId, UUID placeId);
     boolean isFavorite(UUID userId, UUID placeId);
 }
