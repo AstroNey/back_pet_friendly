@@ -12,11 +12,9 @@ Spec impérative : `src/main/BACKEND_JAVA_SPRING.md` — **toujours relire avant
 
 À régénérer/commiter à chaque changement d'API. Le diff dans les PRs détecte instantanément toute modification du contrat. Sert aussi de source pour le codegen client Flutter.
 
-**Doc archi** (`docs/`) : 01 (hexa), 05 (persistance/MapStruct/PostGIS), 06 (JWT + refresh rotation), 08 (S3/FCM). Modules 02/03/04 (modèles, ports, services) et 07 (web) supprimés — redondants avec le code source et Swagger.
+**Index `concept → file:line`** : `docs/MAP.md` — premier réflexe pour localiser quoi que ce soit dans le code.
 
-**Doc Flutter** : `docs/flutter-frontend.md`.
-
-**Setup front (cross-projet)** : `docs/frontend-setup.md` contient le snippet prêt à copier dans le `CLAUDE.md` d'un futur projet front pour qu'il puisse appeler ce backend sans deviner.
+**Setup front (cross-projet)** : `docs/frontend-setup.md` — snippet prêt à coller dans le `CLAUDE.md` d'un futur projet front.
 
 ## Stack
 

@@ -1,0 +1,21 @@
+{
+    email {$EMAIL}
+}
+
+{$DOMAIN} {
+    encode zstd gzip
+
+    @api path /api/* /actuator/health /swagger-ui* /api-docs*
+    handle @api {
+        reverse_proxy app:8080
+    }
+
+    handle {
+        respond "PetFriendly API" 200
+    }
+
+    log {
+        output stdout
+        format console
+    }
+}

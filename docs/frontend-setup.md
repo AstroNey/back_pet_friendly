@@ -17,8 +17,7 @@ Backend Spring Boot 3.3.4 / Java 21 — path absolu :
 - **Contrat API** (source de vérité unique) : `C:\Users\nicol\IdeaProjects\backend_pet_friendly\openapi.json`
 - **Guide projet backend** : `C:\Users\nicol\IdeaProjects\backend_pet_friendly\CLAUDE.md`
 - **Spec impérative** : `C:\Users\nicol\IdeaProjects\backend_pet_friendly\src\main\BACKEND_JAVA_SPRING.md`
-- **Doc front-spécifique** : `C:\Users\nicol\IdeaProjects\backend_pet_friendly\docs\flutter-frontend.md`
-- **Doc archi backend** : `C:\Users\nicol\IdeaProjects\backend_pet_friendly\docs\01-architecture-hexagonale.md` (et 05, 06, 08)
+- **Index navigation** : `C:\Users\nicol\IdeaProjects\backend_pet_friendly\docs\MAP.md` (concept → file:line)
 
 ### Lancer le backend en local
 
