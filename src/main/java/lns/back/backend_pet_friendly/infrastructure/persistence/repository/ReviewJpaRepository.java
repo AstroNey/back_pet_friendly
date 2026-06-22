@@ -3,10 +3,16 @@ import lns.back.backend_pet_friendly.infrastructure.persistence.entity.ReviewJpa
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-import java.util.Optional;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
 import java.util.UUID;
 public interface ReviewJpaRepository extends JpaRepository<ReviewJpaEntity, UUID> {
     Page<ReviewJpaEntity> findByPlaceId(UUID placeId, Pageable pageable);
-    Optional<ReviewJpaEntity> findByPlaceIdAndAuthorId(UUID placeId, UUID authorId);
+
     boolean existsByPlaceIdAndAuthorId(UUID placeId, UUID authorId);
+    long countByPlaceId(UUID placeId);
+
+    @Query("SELECT COALESCE(AVG(r.rating), 0) FROM ReviewJpaEntity r WHERE r.placeId = :placeId")
+    double averageRatingByPlaceId(@Param("placeId") UUID placeId);
 }

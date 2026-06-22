@@ -1,4 +1,5 @@
 package lns.back.backend_pet_friendly.infrastructure.persistence.repository;
+import lns.back.backend_pet_friendly.domain.model.AnimalType;
 import lns.back.backend_pet_friendly.domain.model.PlaceType;
 import lns.back.backend_pet_friendly.infrastructure.persistence.entity.PlaceJpaEntity;
 import org.springframework.data.domain.Page;
@@ -11,8 +12,11 @@ import java.util.UUID;
 public interface PlaceJpaRepository extends JpaRepository<PlaceJpaEntity, UUID> {
     @Query("SELECT p FROM PlaceJpaEntity p WHERE " +
            "(:type IS NULL OR p.type = :type) AND " +
-           "(:text IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%',:text,'%')) OR LOWER(p.address) LIKE LOWER(CONCAT('%',:text,'%')))")
-    Page<PlaceJpaEntity> search(@Param("type") PlaceType type, @Param("text") String text, Pageable pageable);
+           "(:text IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%',:text,'%')) OR LOWER(p.address) LIKE LOWER(CONCAT('%',:text,'%'))) AND " +
+           "(:filterAnimals = FALSE OR EXISTS (SELECT a FROM p.animals a WHERE a IN :animals))")
+    Page<PlaceJpaEntity> search(@Param("type") PlaceType type, @Param("text") String text,
+                                @Param("filterAnimals") boolean filterAnimals,
+                                @Param("animals") List<AnimalType> animals, Pageable pageable);
 
     @Query("SELECT p FROM PlaceJpaEntity p JOIN FavoriteJpaEntity f ON f.id.placeId = p.id WHERE f.id.userId = :userId")
     List<PlaceJpaEntity> findFavoritesByUserId(@Param("userId") UUID userId);
@@ -32,6 +36,8 @@ public interface PlaceJpaRepository extends JpaRepository<PlaceJpaEntity, UUID> 
               AND (CAST(:text AS text) IS NULL
                    OR LOWER(p.name)    LIKE LOWER('%' || CAST(:text AS text) || '%')
                    OR LOWER(p.address) LIKE LOWER('%' || CAST(:text AS text) || '%'))
+              AND (CAST(:filterAnimals AS boolean) = FALSE
+                   OR EXISTS (SELECT 1 FROM place_animals pa WHERE pa.place_id = p.id AND pa.animal IN (:animals)))
             ORDER BY ST_Distance(
                 ST_SetSRID(ST_MakePoint(p.longitude, p.latitude), 4326)::geography,
                 ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography
@@ -48,6 +54,8 @@ public interface PlaceJpaRepository extends JpaRepository<PlaceJpaEntity, UUID> 
               AND (CAST(:text AS text) IS NULL
                    OR LOWER(p.name)    LIKE LOWER('%' || CAST(:text AS text) || '%')
                    OR LOWER(p.address) LIKE LOWER('%' || CAST(:text AS text) || '%'))
+              AND (CAST(:filterAnimals AS boolean) = FALSE
+                   OR EXISTS (SELECT 1 FROM place_animals pa WHERE pa.place_id = p.id AND pa.animal IN (:animals)))
             """,
             nativeQuery = true)
     Page<PlaceJpaEntity> searchNearby(@Param("lat") double lat,
@@ -55,5 +63,7 @@ public interface PlaceJpaRepository extends JpaRepository<PlaceJpaEntity, UUID> 
                                       @Param("radiusMeters") double radiusMeters,
                                       @Param("type") String type,
                                       @Param("text") String text,
+                                      @Param("filterAnimals") boolean filterAnimals,
+                                      @Param("animals") List<String> animals,
                                       Pageable pageable);
 }

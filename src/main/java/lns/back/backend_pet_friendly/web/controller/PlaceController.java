@@ -14,11 +14,17 @@ import lns.back.backend_pet_friendly.domain.port.in.SearchUseCase;
 import lns.back.backend_pet_friendly.web.dto.request.CreatePlaceRequest;
 import lns.back.backend_pet_friendly.web.dto.response.PageResponse;
 import lns.back.backend_pet_friendly.web.dto.response.PlaceResponse;
+
+
+import lns.back.backend_pet_friendly.web.dto.response.UploadResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
@@ -104,5 +110,21 @@ public class PlaceController {
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         placeUseCase.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Upload a photo for a place", description = "Upload an image (jpg/png/webp) and attach it to the place as its main photo. Multipart/form-data.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Uploaded, returns public URL"),
+        @ApiResponse(responseCode = "400", description = "Empty or invalid file"),
+        @ApiResponse(responseCode = "401", description = "Missing or invalid JWT"),
+        @ApiResponse(responseCode = "404", description = "Place not found")
+    })
+    @PostMapping(value = "/{id}/photos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<UploadResponse> uploadPhoto(@PathVariable UUID id,
+            @Parameter(description = "Image file (jpg/png/webp)") @RequestParam("file") MultipartFile file) throws IOException {
+        // TODO: enforce owner-only when ownership check is added in PlaceUseCase
+        if (file.isEmpty()) throw new IllegalArgumentException("file is empty");
+        String url = placeUseCase.uploadImage(id, file.getBytes(), file.getOriginalFilename(), file.getContentType());
+        return ResponseEntity.ok(new UploadResponse(url));
     }
 }

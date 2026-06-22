@@ -24,7 +24,11 @@ public class PlaceJpaEntity {
     Double longitude;
     @Builder.Default double rating = 0.0;
     @Builder.Default int reviewCount = 0;
-    @JdbcTypeCode(SqlTypes.JSON) @Column(columnDefinition = "text") @Builder.Default List<AnimalType> animals = new ArrayList<>();
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "place_animals", joinColumns = @JoinColumn(name = "place_id"))
+    @Column(name = "animal", nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Builder.Default List<AnimalType> animals = new ArrayList<>();
     String imageUrl;
     @JdbcTypeCode(SqlTypes.JSON) @Column(columnDefinition = "text") @Builder.Default List<String> galleryUrls = new ArrayList<>();
     @Column(columnDefinition = "TEXT") String description;

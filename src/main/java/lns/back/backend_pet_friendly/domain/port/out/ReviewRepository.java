@@ -11,6 +11,8 @@ public interface ReviewRepository {
     Page<Review> findByPlaceId(UUID placeId, Pageable pageable);
     Optional<Review> findById(UUID id);
     boolean existsByPlaceIdAndAuthorId(UUID placeId, UUID authorId);
+    long countByPlaceId(UUID placeId);
+    double averageRatingByPlaceId(UUID placeId);
     Review save(Review review);
     void delete(UUID id);
 }

@@ -1,17 +1,22 @@
 package lns.back.backend_pet_friendly.web.controller;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lns.back.backend_pet_friendly.domain.port.in.UserUseCase;
 import lns.back.backend_pet_friendly.web.dto.request.UpdateProfileRequest;
+import lns.back.backend_pet_friendly.web.dto.response.UploadResponse;
 import lns.back.backend_pet_friendly.web.dto.response.UserResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import java.io.IOException;
 import java.util.Map;
 import java.util.UUID;
 
@@ -47,5 +52,21 @@ public class UserController {
     public ResponseEntity<UserResponse> update(@Valid @RequestBody UpdateProfileRequest req, @AuthenticationPrincipal UserDetails user) {
         UUID id = UUID.fromString(user.getUsername());
         return ResponseEntity.ok(UserResponse.from(userUseCase.updateProfile(id, new UserUseCase.UpdateProfileCommand(req.name(), req.pets()))));
+    }
+
+    @Operation(summary = "Upload current user avatar", description = "Upload an image (jpg/png/webp) as the authenticated user's avatar. Multipart/form-data.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Uploaded, returns public URL"),
+        @ApiResponse(responseCode = "400", description = "Empty or invalid file"),
+        @ApiResponse(responseCode = "401", description = "Missing or invalid JWT")
+    })
+    @PostMapping(value = "/me/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<UploadResponse> uploadAvatar(
+            @Parameter(description = "Image file (jpg/png/webp)") @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal UserDetails user) throws IOException {
+        if (file.isEmpty()) throw new IllegalArgumentException("file is empty");
+        UUID id = UUID.fromString(user.getUsername());
+        String url = userUseCase.uploadAvatar(id, file.getBytes(), file.getOriginalFilename(), file.getContentType());
+        return ResponseEntity.ok(new UploadResponse(url));
     }
 }

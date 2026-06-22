@@ -29,7 +29,6 @@ CREATE TABLE places (
     location      GEOGRAPHY(POINT, 4326),
     rating        DOUBLE PRECISION NOT NULL DEFAULT 0.0,
     review_count  INTEGER          NOT NULL DEFAULT 0,
-    animals       TEXT,
     image_url     VARCHAR(500),
     gallery_urls  TEXT,
     description   TEXT,
@@ -41,6 +40,14 @@ CREATE TABLE places (
 CREATE INDEX idx_places_type     ON places(type);
 CREATE INDEX idx_places_location ON places USING GIST(location);
 CREATE INDEX idx_places_name     ON places USING GIN(to_tsvector('french', name));
+
+-- Animaux acceptés : @ElementCollection (filtre OR portable H2/Postgres, pas de colonne JSON)
+CREATE TABLE place_animals (
+    place_id  UUID        NOT NULL REFERENCES places(id) ON DELETE CASCADE,
+    animal    VARCHAR(30) NOT NULL
+);
+CREATE INDEX idx_place_animals_place  ON place_animals(place_id);
+CREATE INDEX idx_place_animals_animal ON place_animals(animal);
 
 -- ─── Reviews ────────────────────────────────────────────────────────────
 CREATE TABLE reviews (

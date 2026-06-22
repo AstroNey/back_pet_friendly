@@ -52,13 +52,17 @@ class PlaceSearchPostGISIT extends PostgresTestcontainersBase {
     }
 
     private void createPlace(String name, double lat, double lng) throws Exception {
+        createPlace(name, lat, lng, List.of("DOG"));
+    }
+
+    private void createPlace(String name, double lat, double lng, List<String> animals) throws Exception {
         Map<String, Object> req = Map.of(
                 "name", name,
                 "type", "CAFE",
                 "address", name + " addr",
                 "latitude", lat,
                 "longitude", lng,
-                "animals", List.of("DOG"));
+                "animals", animals);
         mockMvc.perform(post("/api/v1/places")
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -87,6 +91,31 @@ class PlaceSearchPostGISIT extends PostgresTestcontainersBase {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[*].name", hasItems("Hôtel Lyon", "Café Paris")))
                 .andExpect(jsonPath("$.content[*].name", not(hasItem("Parc Marseille"))));
+    }
+
+    @Test
+    void searchNear_Paris_filtersByAnimals_onNativeQuery_orSemantics() throws Exception {
+        // Les 3 lieux du setUp acceptent DOG. On ajoute un lieu CAT-only près de Paris.
+        createPlace("Chat Paris", PARIS_LAT, PARIS_LNG, List.of("CAT"));
+
+        // animals=CAT + géoloc → branche native PostGIS : ne retourne que le lieu CAT.
+        mockMvc.perform(get("/api/v1/places/search")
+                        .param("lat", String.valueOf(PARIS_LAT))
+                        .param("lng", String.valueOf(PARIS_LNG))
+                        .param("radius", "50")
+                        .param("animals", "CAT"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[*].name", hasItem("Chat Paris")))
+                .andExpect(jsonPath("$.content[*].name", not(hasItem("Café Paris"))));
+
+        // animals=DOG&CAT (OR) → retourne les deux lieux parisiens.
+        mockMvc.perform(get("/api/v1/places/search")
+                        .param("lat", String.valueOf(PARIS_LAT))
+                        .param("lng", String.valueOf(PARIS_LNG))
+                        .param("radius", "50")
+                        .param("animals", "DOG").param("animals", "CAT"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[*].name", hasItems("Chat Paris", "Café Paris")));
     }
 
     @Test

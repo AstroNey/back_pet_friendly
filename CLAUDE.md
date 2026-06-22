@@ -16,6 +16,10 @@ Spec impérative : `src/main/BACKEND_JAVA_SPRING.md` — **toujours relire avant
 
 **Setup front (cross-projet)** : `docs/frontend-setup.md` — snippet prêt à coller dans le `CLAUDE.md` d'un futur projet front.
 
+**Décisions structurantes** : `docs/adr/` — Architecture Decision Records (le « pourquoi » des choix archi : hexa, UUID, refresh rotation, MapStruct).
+
+**Sous-agents projet** (`.claude/agents/`) : `endpoint-scaffolder`, `archi-validator`, `map-keeper`, `db-migration-writer`, `swagger-annotator`. Invoquables via `Agent(subagent_type="<nom>")`.
+
 ## Stack
 
 - **Spring Boot 3.3.4**, **Java 21** (preview features, virtual threads on)

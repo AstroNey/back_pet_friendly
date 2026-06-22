@@ -1,7 +1,29 @@
 {
   "permissions": {
     "allow": [
-      "Bash(xargs grep *)"
+      "Bash(xargs grep *)",
+      "PowerShell($c = Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue; if \\($c\\) { $c.OwningProcess | Select-Object -Unique | ForEach-Object { Stop-Process -Id $_ -Force; \"killed PID $_\" } } else { \"nothing on 8080\" })",
+      "Bash(export JAVA_HOME=/c/Users/nicol/.jdks/ms-21.0.10)",
+      "Bash(./mvnw spring-boot:run)",
+      "Bash(grep -q \"Started BackendPetFriendlyApplication\\\\|APPLICATION FAILED\\\\|BUILD FAILURE\" \"C:\\\\\\\\Users\\\\\\\\nicol\\\\\\\\AppData\\\\\\\\Local\\\\\\\\Temp\\\\\\\\claude\\\\\\\\C--Users-nicol-IdeaProjects-backend-pet-friendly\\\\\\\\4eed09f3-daee-4dcc-ae9c-8d669a39d311\\\\\\\\tasks\\\\\\\\b33jxavlv.output\")",
+      "Bash(break)",
+      "Bash(tail -n 25 \"C:\\\\\\\\Users\\\\\\\\nicol\\\\\\\\AppData\\\\\\\\Local\\\\\\\\Temp\\\\\\\\claude\\\\\\\\C--Users-nicol-IdeaProjects-backend-pet-friendly\\\\\\\\4eed09f3-daee-4dcc-ae9c-8d669a39d311\\\\\\\\tasks\\\\\\\\b33jxavlv.output\")",
+      "Bash(grep -n -i \"flyway\\\\|migration\\\\|Syntax error\\\\|Caused by\\\\|profile\\\\|FlywayException\\\\|Unable to\\\\|V1__\" \"C:\\\\\\\\Users\\\\\\\\nicol\\\\\\\\AppData\\\\\\\\Local\\\\\\\\Temp\\\\\\\\claude\\\\\\\\C--Users-nicol-IdeaProjects-backend-pet-friendly\\\\\\\\4eed09f3-daee-4dcc-ae9c-8d669a39d311\\\\\\\\tasks\\\\\\\\b33jxavlv.output\")",
+      "Bash(./mvnw spring-boot:run -Dspring-boot.run.profiles=dev)",
+      "Bash(grep *)",
+      "PowerShell($c = Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue; if \\($c\\) { $c.OwningProcess | Select-Object -Unique | ForEach-Object { Stop-Process -Id $_ -Force; \"killed $_\" } } else { \"none\" })",
+      "Bash(curl -s \"http://localhost:8080/api/v1/places?page=0&size=3\")",
+      "Bash(./mvnw -q compile)",
+      "Bash(JAVA_HOME=/c/Users/nicol/.jdks/ms-21.0.10 ./mvnw -q test -Dtest=\"PlaceSearchAnimalsIT,SearchServiceTest,PlaceServiceTest,ArchitectureTest\" -Dspring.datasource.url=\"jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE\")",
+      "Bash(JAVA_HOME=/c/Users/nicol/.jdks/ms-21.0.10 ./mvnw test -Dtest=\"PlaceSearchAnimalsIT,SearchServiceTest\" -Dspring.datasource.url=\"jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE\")",
+      "Bash(rm -rf \"C:\\\\Users\\\\nicol\\\\IdeaProjects\\\\backend_pet_friendly\\\\var\\\\h2\")",
+      "Bash(JAVA_HOME=/c/Users/nicol/.jdks/ms-21.0.10 ./mvnw -q test -Dtest=\"PlaceControllerIT,PlaceSearchAnimalsIT\")",
+      "Bash(JAVA_HOME=/c/Users/nicol/.jdks/ms-21.0.10 ./mvnw test -Dtest=\"PlaceControllerIT,PlaceSearchAnimalsIT\")",
+      "Bash(JAVA_HOME=/c/Users/nicol/.jdks/ms-21.0.10 ./mvnw clean test)",
+      "Bash(JAVA_HOME=/c/Users/nicol/.jdks/ms-21.0.10 ./mvnw test -Dtest=\"PlaceSearchPostGISIT\")",
+      "mcp__ide__getDiagnostics",
+      "Bash(JAVA_HOME=/c/Users/nicol/.jdks/ms-21.0.10 ./mvnw clean test-compile -q)",
+      "Bash(echo \"EXIT: $?\")"
     ]
   }
 }

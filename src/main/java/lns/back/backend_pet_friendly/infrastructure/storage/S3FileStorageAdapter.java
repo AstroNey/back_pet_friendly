@@ -4,6 +4,7 @@ import jakarta.annotation.PostConstruct;
 import lns.back.backend_pet_friendly.domain.port.out.FileStoragePort;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
@@ -21,6 +22,7 @@ import java.util.UUID;
 
 @Slf4j
 @Component
+@ConditionalOnProperty(name = "petfriendly.storage.type", havingValue = "s3", matchIfMissing = true)
 public class S3FileStorageAdapter implements FileStoragePort {
 
     private final String bucket;

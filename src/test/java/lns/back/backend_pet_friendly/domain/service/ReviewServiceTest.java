@@ -1,11 +1,13 @@
 package lns.back.backend_pet_friendly.domain.service;
 
+import lns.back.backend_pet_friendly.domain.exception.DuplicateReviewException;
 import lns.back.backend_pet_friendly.domain.model.Coordinates;
 import lns.back.backend_pet_friendly.domain.model.Place;
 import lns.back.backend_pet_friendly.domain.model.PlaceType;
 import lns.back.backend_pet_friendly.domain.model.Review;
 import lns.back.backend_pet_friendly.domain.model.User;
 import lns.back.backend_pet_friendly.domain.port.in.ReviewUseCase.CreateReviewCommand;
+import lns.back.backend_pet_friendly.domain.port.in.ReviewUseCase.UpdateReviewCommand;
 import lns.back.backend_pet_friendly.domain.port.out.PlaceRepository;
 import lns.back.backend_pet_friendly.domain.port.out.ReviewRepository;
 import lns.back.backend_pet_friendly.domain.port.out.UserRepository;
@@ -43,28 +45,63 @@ class ReviewServiceTest {
     }
 
     @Test
-    void create_success_savesReviewAndUpdatesPlace() {
+    void create_success_savesReviewAndRecalculatesPlaceFromAllReviews() {
         when(placeRepository.findById(place.getId())).thenReturn(Optional.of(place));
         when(reviewRepository.existsByPlaceIdAndAuthorId(place.getId(), author.getId())).thenReturn(false);
         when(userRepository.findById(author.getId())).thenReturn(Optional.of(author));
         when(reviewRepository.save(any(Review.class))).thenAnswer(inv -> inv.getArgument(0));
+        // Le lieu a déjà 3 avis (moyenne 3.0) en base → recalcul depuis l'agrégat, pas la liste en mémoire.
+        when(reviewRepository.countByPlaceId(place.getId())).thenReturn(3L);
+        when(reviewRepository.averageRatingByPlaceId(place.getId())).thenReturn(3.0);
 
         Review review = reviewService.create(place.getId(), new CreateReviewCommand(author.getId(), 4.5, "Great!"));
 
         assertThat(review.getRating()).isEqualTo(4.5);
         assertThat(review.getAuthorName()).isEqualTo("Alice");
+        // Bug A corrigé : reviewCount = agrégat réel (3), pas 1 ; rating = moyenne réelle (3.0), pas la dernière note.
+        assertThat(place.getReviewCount()).isEqualTo(3);
+        assertThat(place.getRating()).isEqualTo(3.0);
         verify(placeRepository).save(place);
     }
 
     @Test
-    void create_duplicateReview_throws() {
+    void create_duplicateReview_throwsDuplicateReviewException() {
         when(placeRepository.findById(place.getId())).thenReturn(Optional.of(place));
         when(reviewRepository.existsByPlaceIdAndAuthorId(place.getId(), author.getId())).thenReturn(true);
 
         assertThatThrownBy(() -> reviewService.create(place.getId(),
                 new CreateReviewCommand(author.getId(), 4.0, "ok")))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(DuplicateReviewException.class)
                 .hasMessageContaining("already reviewed");
+        verify(reviewRepository, never()).save(any());
+    }
+
+    @Test
+    void update_byAuthor_updatesAndRecalculatesPlace() {
+        Review review = Review.builder().id(UUID.randomUUID()).placeId(place.getId())
+                .authorId(author.getId()).rating(2.0).text("meh").build();
+        when(reviewRepository.findById(review.getId())).thenReturn(Optional.of(review));
+        when(reviewRepository.save(any(Review.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(placeRepository.findById(place.getId())).thenReturn(Optional.of(place));
+        when(reviewRepository.countByPlaceId(place.getId())).thenReturn(1L);
+        when(reviewRepository.averageRatingByPlaceId(place.getId())).thenReturn(5.0);
+
+        Review updated = reviewService.update(review.getId(), author.getId(), new UpdateReviewCommand(5.0, "top"));
+
+        assertThat(updated.getRating()).isEqualTo(5.0);
+        assertThat(updated.getText()).isEqualTo("top");
+        assertThat(place.getRating()).isEqualTo(5.0);
+        verify(placeRepository).save(place);
+    }
+
+    @Test
+    void update_byOtherUser_throwsAccessDenied() {
+        Review review = Review.builder().id(UUID.randomUUID()).placeId(place.getId())
+                .authorId(author.getId()).rating(2.0).build();
+        when(reviewRepository.findById(review.getId())).thenReturn(Optional.of(review));
+
+        assertThatThrownBy(() -> reviewService.update(review.getId(), UUID.randomUUID(), new UpdateReviewCommand(5.0, "x")))
+                .isInstanceOf(AccessDeniedException.class);
         verify(reviewRepository, never()).save(any());
     }
 

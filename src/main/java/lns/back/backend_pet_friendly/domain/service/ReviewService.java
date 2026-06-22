@@ -1,6 +1,6 @@
 package lns.back.backend_pet_friendly.domain.service;
 
-import lns.back.backend_pet_friendly.domain.model.Place;
+import lns.back.backend_pet_friendly.domain.exception.DuplicateReviewException;
 import lns.back.backend_pet_friendly.domain.model.Review;
 import lns.back.backend_pet_friendly.domain.model.User;
 import lns.back.backend_pet_friendly.domain.port.in.ReviewUseCase;
@@ -32,10 +32,10 @@ public class ReviewService implements ReviewUseCase {
 
     @Override
     public Review create(UUID placeId, CreateReviewCommand cmd) {
-        Place place = placeRepository.findById(placeId)
+        placeRepository.findById(placeId)
                 .orElseThrow(() -> new IllegalArgumentException("Place not found: " + placeId));
         if (reviewRepository.existsByPlaceIdAndAuthorId(placeId, cmd.authorId())) {
-            throw new IllegalArgumentException("You already reviewed this place");
+            throw new DuplicateReviewException("You already reviewed this place");
         }
         User author = userRepository.findById(cmd.authorId())
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
@@ -51,8 +51,21 @@ public class ReviewService implements ReviewUseCase {
                 .build();
 
         review = reviewRepository.save(review);
-        place.addReview(review);
-        placeRepository.save(place);
+        recalcPlaceRating(placeId);
+        return review;
+    }
+
+    @Override
+    public Review update(UUID reviewId, UUID requesterId, UpdateReviewCommand cmd) {
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new IllegalArgumentException("Review not found: " + reviewId));
+        if (!review.getAuthorId().equals(requesterId)) {
+            throw new AccessDeniedException("Not your review");
+        }
+        review.setRating(cmd.rating());
+        review.setText(cmd.text());
+        review = reviewRepository.save(review);
+        recalcPlaceRating(review.getPlaceId());
         return review;
     }
 
@@ -64,5 +77,20 @@ public class ReviewService implements ReviewUseCase {
             throw new AccessDeniedException("Not your review");
         }
         reviewRepository.delete(reviewId);
+        recalcPlaceRating(review.getPlaceId());
+    }
+
+    /**
+     * Recalcule rating + reviewCount d'un lieu depuis TOUS ses avis (le Place chargé a sa
+     * liste reviews vide — mapper ignore). À appeler après tout create/update/delete.
+     */
+    private void recalcPlaceRating(UUID placeId) {
+        placeRepository.findById(placeId).ifPresent(place -> {
+            long count = reviewRepository.countByPlaceId(placeId);
+            double avg = count == 0 ? 0.0 : reviewRepository.averageRatingByPlaceId(placeId);
+            place.setRating(avg);
+            place.setReviewCount((int) count);
+            placeRepository.save(place);
+        });
     }
 }

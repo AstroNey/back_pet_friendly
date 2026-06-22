@@ -28,8 +28,11 @@ Index alphabétique-fonctionnel des concepts non-triviaux du projet. Évite les 
 
 | Concept | Fichier:ligne | Détail |
 |---|---|---|
-| 1 review par user et par place | `domain/service/ReviewService.java:37` | Check `existsByPlaceIdAndAuthorId` avant création |
-| Author-only delete review | `domain/service/ReviewService.java:63` | Lance `AccessDeniedException` si `authorId != requesterId` |
+| 1 review par user et par place | `domain/service/ReviewService.java:39` | Check `existsByPlaceIdAndAuthorId` → `DuplicateReviewException` (→ **409**) |
+| Author-only delete review | `domain/service/ReviewService.java` | `delete`/`update` lancent `AccessDeniedException` si `authorId != requesterId` |
+| Édition review (auteur-only) | `domain/service/ReviewService.java` (`update`) | `PUT /api/v1/reviews/{id}` — remplace rating+text, recalcule place |
+| Recalcul rating/reviewCount place | `domain/service/ReviewService.java` (`recalcPlaceRating`) | Agrégat `count`+`AVG` depuis tous les avis (la liste en mémoire du Place est vide — mapper ignore). Appelé sur create/update/delete |
+| Doublon review → 409 | `web/exception/GlobalExceptionHandler.java` + `domain/exception/DuplicateReviewException.java` | Exception domaine (archi : domain.service ne peut throw web.*) |
 | Owner-only update place | `domain/service/PlaceService.java:52` | Voir condition d'ownership |
 | Place : recalcul rating | `domain/model/Place.java:49` | `addReview` met à jour rating + reviewCount |
 | Coordinates validation | `domain/model/Coordinates.java:5` | Compact constructor, lat ∈ [-90,90], lng ∈ [-180,180] |
@@ -43,8 +46,10 @@ Index alphabétique-fonctionnel des concepts non-triviaux du projet. Évite les 
 
 | Concept | Fichier:ligne | Détail |
 |---|---|---|
-| Recherche JPQL (LIKE) | `infrastructure/persistence/repository/PlaceJpaRepository.java:15` | Fallback sans géoloc — name + address + type |
-| Recherche PostGIS native | `infrastructure/persistence/repository/PlaceJpaRepository.java:53` | `ST_DWithin` + `ST_Distance` ordré par distance |
+| Recherche JPQL (LIKE) | `infrastructure/persistence/repository/PlaceJpaRepository.java:13` | Fallback sans géoloc — name + address + type + filtre animals (OR via `EXISTS … p.animals a IN :animals`) |
+| Recherche PostGIS native | `infrastructure/persistence/repository/PlaceJpaRepository.java:25` | `ST_DWithin` + `ST_Distance` ordré par distance + filtre animals (`EXISTS … place_animals`) |
+| Filtre animals (OR) — câblage | `infrastructure/persistence/adapter/PlaceRepositoryAdapter.java:32` | Lit `q.animals()`, `filterAnimals` + liste fallback non-vide (évite empty-IN) |
+| Animaux acceptés (stockage) | `infrastructure/persistence/entity/PlaceJpaEntity.java:27` | `@ElementCollection` → table `place_animals(place_id, animal)`, `@Enumerated(STRING)`. **Pas** colonne JSON |
 | Favoris d'un user | `infrastructure/persistence/repository/PlaceJpaRepository.java:18` | JOIN `FavoriteJpaEntity` sur `(userId, placeId)` |
 | Migration init | `src/main/resources/db/migration/V1__init_schema.sql` | Extensions UUID-OSSP + PostGIS, toutes tables, GIN FR sur `places.name` |
 
@@ -61,8 +66,10 @@ Index alphabétique-fonctionnel des concepts non-triviaux du projet. Évite les 
 
 | Concept | Fichier:ligne | Détail |
 |---|---|---|
-| S3 init avec fallback | `infrastructure/storage/S3FileStorageAdapter.java:45` | `@PostConstruct`, dégradation graceful si MinIO indispo |
-| S3 upload + sanitize | `infrastructure/storage/S3FileStorageAdapter.java:61` | UUID prefix + regex sanitization |
+| S3 init avec fallback | `infrastructure/storage/S3FileStorageAdapter.java:47` | `@PostConstruct`, dégradation graceful si MinIO indispo. Conditionnel via `petfriendly.storage.type=s3` (défaut) |
+| S3 upload + sanitize | `infrastructure/storage/S3FileStorageAdapter.java:63` | UUID prefix + regex sanitization |
+| LocalFileStorageAdapter init | `infrastructure/storage/LocalFileStorageAdapter.java:32` | Crée le root-dir, mode local activé via `petfriendly.storage.type=local` |
+| Local files served on /files/** | `infrastructure/storage/LocalFileStorageWebConfig.java:25` | Mappe `/files/**` sur le disque |
 | FCM no-op fallback | `infrastructure/notification/FcmNotificationAdapter.java:39` | `firebaseMessaging == null` → log debug only |
 | Firebase config | `infrastructure/notification/FirebaseConfig.java` | Lit `petfriendly.firebase.service-account-file`, ne crée pas le bean si vide |
 
@@ -73,10 +80,12 @@ Index alphabétique-fonctionnel des concepts non-triviaux du projet. Évite les 
 | OpenAPI bean (Swagger) | `config/OpenApiConfig.java:22` | Bearer JWT scheme, servers (local + prod), tags |
 | Auth controller | `web/controller/AuthController.java:24-46` | register/login/refresh/logout — `@SecurityRequirements` (public) |
 | Place controller | `web/controller/PlaceController.java:32-104` | list, search (PostGIS), getById, create/update/delete |
+| Place photo upload (multipart) | `web/controller/PlaceController.java:117` | `POST /api/v1/places/{id}/photos` — multipart, JWT, delegates to `placeUseCase.uploadImage` |
 | Review controller | `web/controller/ReviewController.java:27-54` | byPlace, create, delete |
 | Favorite controller | `web/controller/FavoriteController.java:25-42` | get, toggle, remove |
 | Notification controller | `web/controller/NotificationController.java:23-55` | list, markRead, delete, clearAll |
 | User controller | `web/controller/UserController.java:24-47` | me (profil + stats), update |
+| User avatar upload (multipart) | `web/controller/UserController.java:60` | `POST /api/v1/users/me/avatar` — multipart, JWT, delegates to `userUseCase.uploadAvatar` |
 
 ## Bootstrapping & config
 

@@ -29,18 +29,34 @@ public class ReviewController {
         return ResponseEntity.ok(new PageResponse<>(reviewUseCase.getByPlace(placeId, page, size).map(ReviewResponse::from)));
     }
 
-    @Operation(summary = "Create review", description = "Authenticated. The author is the current user.")
+    @Operation(summary = "Create review", description = "Authenticated. The author is the current user. One review per user and per place.")
     @ApiResponses({
         @ApiResponse(responseCode = "201", description = "Review created"),
         @ApiResponse(responseCode = "400", description = "Invalid payload (e.g. rating out of range)"),
         @ApiResponse(responseCode = "401", description = "Missing or invalid JWT"),
-        @ApiResponse(responseCode = "404", description = "Place not found")
+        @ApiResponse(responseCode = "404", description = "Place not found"),
+        @ApiResponse(responseCode = "409", description = "The user already reviewed this place")
     })
     @PostMapping("/places/{placeId}/reviews")
     public ResponseEntity<ReviewResponse> create(@PathVariable UUID placeId, @Valid @RequestBody CreateReviewRequest req,
             @AuthenticationPrincipal UserDetails user) {
         var cmd = new ReviewUseCase.CreateReviewCommand(UUID.fromString(user.getUsername()), req.rating(), req.text());
         return ResponseEntity.status(201).body(ReviewResponse.from(reviewUseCase.create(placeId, cmd)));
+    }
+
+    @Operation(summary = "Update review", description = "Author-only. Replaces rating and text of an existing review.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Review updated"),
+        @ApiResponse(responseCode = "400", description = "Invalid payload (e.g. rating out of range)"),
+        @ApiResponse(responseCode = "401", description = "Missing or invalid JWT"),
+        @ApiResponse(responseCode = "403", description = "Not the author"),
+        @ApiResponse(responseCode = "404", description = "Review not found")
+    })
+    @PutMapping("/reviews/{reviewId}")
+    public ResponseEntity<ReviewResponse> update(@PathVariable UUID reviewId, @Valid @RequestBody CreateReviewRequest req,
+            @AuthenticationPrincipal UserDetails user) {
+        var cmd = new ReviewUseCase.UpdateReviewCommand(req.rating(), req.text());
+        return ResponseEntity.ok(ReviewResponse.from(reviewUseCase.update(reviewId, UUID.fromString(user.getUsername()), cmd)));
     }
 
     @Operation(summary = "Delete review", description = "Author-only.")

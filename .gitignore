@@ -31,3 +31,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Local file storage (dev) ###
+var/storage/
+
+### H2 file DB (dev persistent) ###
+var/h2/
