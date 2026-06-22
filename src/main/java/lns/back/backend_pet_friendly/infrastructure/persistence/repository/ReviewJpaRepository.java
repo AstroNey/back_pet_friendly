@@ -12,6 +12,7 @@ public interface ReviewJpaRepository extends JpaRepository<ReviewJpaEntity, UUID
 
     boolean existsByPlaceIdAndAuthorId(UUID placeId, UUID authorId);
     long countByPlaceId(UUID placeId);
+    long countByAuthorId(UUID authorId);
 
     @Query("SELECT COALESCE(AVG(r.rating), 0) FROM ReviewJpaEntity r WHERE r.placeId = :placeId")
     double averageRatingByPlaceId(@Param("placeId") UUID placeId);

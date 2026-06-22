@@ -21,6 +21,8 @@ public interface PlaceJpaRepository extends JpaRepository<PlaceJpaEntity, UUID> 
     @Query("SELECT p FROM PlaceJpaEntity p JOIN FavoriteJpaEntity f ON f.id.placeId = p.id WHERE f.id.userId = :userId")
     List<PlaceJpaEntity> findFavoritesByUserId(@Param("userId") UUID userId);
 
+    long countByOwnerId(UUID ownerId);
+
     /**
      * PostGIS-native geospatial search — only works against a PostgreSQL instance with the postgis extension.
      * Filters by radius (metres), optional type, optional text, ordered by distance ascending.

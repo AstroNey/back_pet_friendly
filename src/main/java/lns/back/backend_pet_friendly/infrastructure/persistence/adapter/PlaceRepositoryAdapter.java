@@ -23,6 +23,7 @@ public class PlaceRepositoryAdapter implements PlaceRepository {
     @Override public Place save(Place place) { return mapper.toDomain(jpa.save(mapper.toEntity(place))); }
     @Override public void delete(UUID id) { jpa.deleteById(id); }
     @Override public Page<Place> findAll(Pageable pageable) { return jpa.findAll(pageable).map(mapper::toDomain); }
+    @Override public long countByOwnerId(UUID ownerId) { return jpa.countByOwnerId(ownerId); }
 
     @Override
     public Page<Place> search(SearchQuery q, Pageable pageable) {

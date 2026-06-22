@@ -4,10 +4,10 @@ import lns.back.backend_pet_friendly.domain.model.User;
 import lns.back.backend_pet_friendly.domain.port.in.UserUseCase;
 import lns.back.backend_pet_friendly.domain.port.out.FavoriteRepository;
 import lns.back.backend_pet_friendly.domain.port.out.FileStoragePort;
+import lns.back.backend_pet_friendly.domain.port.out.PlaceRepository;
 import lns.back.backend_pet_friendly.domain.port.out.ReviewRepository;
 import lns.back.backend_pet_friendly.domain.port.out.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -19,6 +19,7 @@ public class UserService implements UserUseCase {
     private final UserRepository userRepository;
     private final ReviewRepository reviewRepository;
     private final FavoriteRepository favoriteRepository;
+    private final PlaceRepository placeRepository;
     private final FileStoragePort fileStoragePort;
 
     @Override
@@ -37,9 +38,10 @@ public class UserService implements UserUseCase {
 
     @Override
     public UserStats getStats(UUID id) {
-        int reviews   = (int) reviewRepository.findByPlaceId(id, PageRequest.of(0, 1)).getTotalElements();
+        int places    = (int) placeRepository.countByOwnerId(id);
+        int reviews   = (int) reviewRepository.countByAuthorId(id);
         int favorites = favoriteRepository.findPlacesByUserId(id).size();
-        return new UserStats(0, reviews, favorites);
+        return new UserStats(places, reviews, favorites);
     }
 
     @Override

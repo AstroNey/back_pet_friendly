@@ -2,8 +2,10 @@ package lns.back.backend_pet_friendly.domain.service;
 
 import lns.back.backend_pet_friendly.domain.model.User;
 import lns.back.backend_pet_friendly.domain.port.in.UserUseCase.UpdateProfileCommand;
+import lns.back.backend_pet_friendly.domain.port.in.UserUseCase.UserStats;
 import lns.back.backend_pet_friendly.domain.port.out.FavoriteRepository;
 import lns.back.backend_pet_friendly.domain.port.out.FileStoragePort;
+import lns.back.backend_pet_friendly.domain.port.out.PlaceRepository;
 import lns.back.backend_pet_friendly.domain.port.out.ReviewRepository;
 import lns.back.backend_pet_friendly.domain.port.out.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,6 +29,7 @@ class UserServiceTest {
     @Mock UserRepository userRepository;
     @Mock ReviewRepository reviewRepository;
     @Mock FavoriteRepository favoriteRepository;
+    @Mock PlaceRepository placeRepository;
     @Mock FileStoragePort fileStoragePort;
     @InjectMocks UserService userService;
 
@@ -71,6 +74,20 @@ class UserServiceTest {
 
         assertThat(updated.getPets()).containsExactly("dog", "cat");
         assertThat(updated.getName()).isEqualTo("Alice");
+    }
+
+    @Test
+    void getStats_countsReviewsByAuthor_placesByOwner_andFavorites() {
+        when(placeRepository.countByOwnerId(user.getId())).thenReturn(2L);
+        when(reviewRepository.countByAuthorId(user.getId())).thenReturn(3L);
+        when(favoriteRepository.findPlacesByUserId(user.getId())).thenReturn(List.of());
+
+        UserStats stats = userService.getStats(user.getId());
+
+        // reviewsWritten compté par authorId (pas placeId=userId qui donnait 0), placesAdded par ownerId (plus 0 codé en dur).
+        assertThat(stats.placesAdded()).isEqualTo(2);
+        assertThat(stats.reviewsWritten()).isEqualTo(3);
+        assertThat(stats.favoritesCount()).isZero();
     }
 
     @Test

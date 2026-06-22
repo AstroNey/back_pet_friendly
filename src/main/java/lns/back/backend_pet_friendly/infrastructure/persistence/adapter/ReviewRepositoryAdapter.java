@@ -18,6 +18,7 @@ public class ReviewRepositoryAdapter implements ReviewRepository {
     @Override public Optional<Review> findById(UUID id) { return jpa.findById(id).map(mapper::toDomain); }
     @Override public boolean existsByPlaceIdAndAuthorId(UUID placeId, UUID authorId) { return jpa.existsByPlaceIdAndAuthorId(placeId, authorId); }
     @Override public long countByPlaceId(UUID placeId) { return jpa.countByPlaceId(placeId); }
+    @Override public long countByAuthorId(UUID authorId) { return jpa.countByAuthorId(authorId); }
     @Override public double averageRatingByPlaceId(UUID placeId) { return jpa.averageRatingByPlaceId(placeId); }
     @Override public Review save(Review review) { return mapper.toDomain(jpa.save(mapper.toEntity(review))); }
     @Override public void delete(UUID id) { jpa.deleteById(id); }

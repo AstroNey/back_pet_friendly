@@ -14,4 +14,5 @@ public interface PlaceRepository {
     void delete(UUID id);
     Page<Place> findAll(Pageable pageable);
     Page<Place> search(SearchQuery query, Pageable pageable);
+    long countByOwnerId(UUID ownerId);
 }
