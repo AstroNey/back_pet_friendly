@@ -38,7 +38,7 @@ public class UserController {
         UserUseCase.UserStats stats = userUseCase.getStats(id);
         return ResponseEntity.ok(Map.of("id", u.id(), "email", u.email(), "name", u.name(),
             "avatarUrl", u.avatarUrl() != null ? u.avatarUrl() : "",
-            "pets", u.pets(), "createdAt", u.createdAt(),
+            "pets", u.pets(), "role", u.role(), "createdAt", u.createdAt(),
             "stats", Map.of("reviewsWritten", stats.reviewsWritten(), "favoritesCount", stats.favoritesCount(), "placesAdded", stats.placesAdded())));
     }
 

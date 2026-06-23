@@ -22,7 +22,7 @@ public class DataSeeder implements CommandLineRunner {
         if (userRepository.findByEmail("admin@petfriendly.fr").isPresent()) return;
 
         userRepository.save(User.builder().id(UUID.randomUUID()).email("admin@petfriendly.fr")
-            .passwordHash(passwordEncoder.encode("admin123")).name("Admin").build());
+            .passwordHash(passwordEncoder.encode("admin123")).name("Admin").role(Role.ADMIN).build());
 
         User user = userRepository.save(User.builder().id(UUID.randomUUID()).email("user@petfriendly.fr")
             .passwordHash(passwordEncoder.encode("user123")).name("Nicolas").pets(List.of("Labrador")).build());

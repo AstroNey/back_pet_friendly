@@ -26,7 +26,7 @@ public interface PlaceUseCase {
     Page<Place> list(int page, int size);
     Place getById(UUID id);
     Place create(CreatePlaceCommand command);
-    Place update(UUID id, CreatePlaceCommand command);
-    void delete(UUID id);
-    String uploadImage(UUID id, byte[] data, String filename, String contentType);
+    Place update(UUID id, CreatePlaceCommand command, UUID requesterId, boolean isAdmin);
+    void delete(UUID id, UUID requesterId, boolean isAdmin);
+    String uploadImage(UUID id, byte[] data, String filename, String contentType, UUID requesterId, boolean isAdmin);
 }

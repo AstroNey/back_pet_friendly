@@ -1,5 +1,6 @@
 package lns.back.backend_pet_friendly.domain.service;
 
+import lns.back.backend_pet_friendly.domain.exception.ResourceNotFoundException;
 import lns.back.backend_pet_friendly.domain.model.User;
 import lns.back.backend_pet_friendly.domain.port.in.UserUseCase;
 import lns.back.backend_pet_friendly.domain.port.out.FavoriteRepository;
@@ -8,6 +9,8 @@ import lns.back.backend_pet_friendly.domain.port.out.PlaceRepository;
 import lns.back.backend_pet_friendly.domain.port.out.ReviewRepository;
 import lns.back.backend_pet_friendly.domain.port.out.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -25,7 +28,7 @@ public class UserService implements UserUseCase {
     @Override
     public User getById(UUID id) {
         return userRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + id));
     }
 
     @Override
@@ -53,10 +56,25 @@ public class UserService implements UserUseCase {
         return url;
     }
 
+    // --- Admin ---
+
     @Override
-    public void updateFcmToken(UUID id, String fcmToken) {
+    public Page<User> listAll(int page, int size) {
+        return userRepository.findAll(PageRequest.of(page, size));
+    }
+
+    @Override
+    public User adminUpdate(UUID id, AdminUpdateCommand cmd) {
         User user = getById(id);
-        user.setFcmToken(fcmToken);
-        userRepository.save(user);
+        if (cmd.name() != null)    user.setName(cmd.name());
+        if (cmd.role() != null)    user.setRole(cmd.role());
+        if (cmd.enabled() != null) user.setEnabled(cmd.enabled());
+        return userRepository.save(user);
+    }
+
+    @Override
+    public void delete(UUID id) {
+        getById(id); // 404 si absent
+        userRepository.deleteById(id);
     }
 }

@@ -29,6 +29,9 @@ petfriendly:
     secret: ${JWT_SECRET:petfriendly-dev-secret-key-must-be-at-least-254-bits-long-change-in-prod}
     expiration-minutes: ${JWT_EXPIRATION_MINUTES:15}
     refresh-expiration-days: ${JWT_REFRESH_DAYS:7}
+  cors:
+    # Liste d'origines séparées par des virgules. Dev = "*". Prod = origine(s) du front (ex: https://admin.petfriendly.fr).
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
   storage:
     type: ${STORAGE_TYPE:s3}
     bucket: ${S3_BUCKET:petfriendly-images}
@@ -48,6 +51,7 @@ sentry:
   ignored-exceptions-for-type:
     - org.springframework.security.access.AccessDeniedException
     - lns.back.backend_pet_friendly.web.exception.ResourceNotFoundException
+    - lns.back.backend_pet_friendly.domain.exception.ResourceNotFoundException
 
 management:
   endpoints:

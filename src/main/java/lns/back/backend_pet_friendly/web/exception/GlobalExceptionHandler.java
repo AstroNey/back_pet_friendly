@@ -19,6 +19,10 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleNotFound(ResourceNotFoundException ex, HttpServletRequest req) {
         return ResponseEntity.status(404).body(new ErrorResponse(Instant.now(), 404, ex.getMessage(), req.getRequestURI()));
     }
+    @ExceptionHandler(lns.back.backend_pet_friendly.domain.exception.ResourceNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleDomainNotFound(lns.back.backend_pet_friendly.domain.exception.ResourceNotFoundException ex, HttpServletRequest req) {
+        return ResponseEntity.status(404).body(new ErrorResponse(Instant.now(), 404, ex.getMessage(), req.getRequestURI()));
+    }
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleBadRequest(IllegalArgumentException ex, HttpServletRequest req) {
         return ResponseEntity.status(400).body(new ErrorResponse(Instant.now(), 400, ex.getMessage(), req.getRequestURI()));

@@ -1,6 +1,7 @@
 package lns.back.backend_pet_friendly.infrastructure.persistence.entity;
 
 import jakarta.persistence.*;
+import lns.back.backend_pet_friendly.domain.model.Role;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -21,6 +22,7 @@ public class UserJpaEntity {
     @Column(length = 512) String fcmToken;
     @JdbcTypeCode(SqlTypes.JSON) @Column(columnDefinition = "text") @Builder.Default List<String> pets = new ArrayList<>();
     @Builder.Default boolean enabled = true;
+    @Enumerated(EnumType.STRING) @Column(nullable = false, length = 20) @Builder.Default Role role = Role.USER;
     @Builder.Default Instant createdAt = Instant.now();
     @Builder.Default Instant updatedAt = Instant.now();
 }

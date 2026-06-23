@@ -50,6 +50,9 @@ public class AuthService implements AuthUseCase {
         if (!passwordEncoder.matches(password, user.getPasswordHash())) {
             throw new IllegalArgumentException("Invalid credentials");
         }
+        if (!user.isEnabled()) {
+            throw new IllegalArgumentException("Account is disabled");
+        }
         return issueTokens(user);
     }
 

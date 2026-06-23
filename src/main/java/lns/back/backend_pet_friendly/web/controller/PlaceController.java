@@ -95,36 +95,44 @@ public class PlaceController {
     @PutMapping("/{id}")
     public ResponseEntity<PlaceResponse> update(@PathVariable UUID id, @Valid @RequestBody CreatePlaceRequest req,
             @AuthenticationPrincipal UserDetails user) {
+        UUID requesterId = UUID.fromString(user.getUsername());
         var cmd = new PlaceUseCase.CreatePlaceCommand(req.name(), req.type(), req.address(),
-            new Coordinates(req.latitude(), req.longitude()), req.animals(), req.description(), req.hours(), UUID.fromString(user.getUsername()));
-        return ResponseEntity.ok(PlaceResponse.from(placeUseCase.update(id, cmd)));
+            new Coordinates(req.latitude(), req.longitude()), req.animals(), req.description(), req.hours(), requesterId);
+        return ResponseEntity.ok(PlaceResponse.from(placeUseCase.update(id, cmd, requesterId, isAdmin(user))));
     }
 
-    @Operation(summary = "Delete place")
+    @Operation(summary = "Delete place", description = "Owner-only (ADMIN can delete any place).")
     @ApiResponses({
         @ApiResponse(responseCode = "204", description = "Deleted"),
         @ApiResponse(responseCode = "401", description = "Missing or invalid JWT"),
+        @ApiResponse(responseCode = "403", description = "Not the owner"),
         @ApiResponse(responseCode = "404", description = "Place not found")
     })
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable UUID id) {
-        placeUseCase.delete(id);
+    public ResponseEntity<Void> delete(@PathVariable UUID id, @AuthenticationPrincipal UserDetails user) {
+        placeUseCase.delete(id, UUID.fromString(user.getUsername()), isAdmin(user));
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "Upload a photo for a place", description = "Upload an image (jpg/png/webp) and attach it to the place as its main photo. Multipart/form-data.")
+    @Operation(summary = "Upload a photo for a place", description = "Upload an image (jpg/png/webp) and attach it to the place as its main photo. Owner-only (ADMIN can upload to any place). Multipart/form-data.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Uploaded, returns public URL"),
         @ApiResponse(responseCode = "400", description = "Empty or invalid file"),
         @ApiResponse(responseCode = "401", description = "Missing or invalid JWT"),
+        @ApiResponse(responseCode = "403", description = "Not the owner"),
         @ApiResponse(responseCode = "404", description = "Place not found")
     })
     @PostMapping(value = "/{id}/photos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<UploadResponse> uploadPhoto(@PathVariable UUID id,
-            @Parameter(description = "Image file (jpg/png/webp)") @RequestParam("file") MultipartFile file) throws IOException {
-        // TODO: enforce owner-only when ownership check is added in PlaceUseCase
+            @Parameter(description = "Image file (jpg/png/webp)") @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal UserDetails user) throws IOException {
         if (file.isEmpty()) throw new IllegalArgumentException("file is empty");
-        String url = placeUseCase.uploadImage(id, file.getBytes(), file.getOriginalFilename(), file.getContentType());
+        String url = placeUseCase.uploadImage(id, file.getBytes(), file.getOriginalFilename(), file.getContentType(),
+            UUID.fromString(user.getUsername()), isAdmin(user));
         return ResponseEntity.ok(new UploadResponse(url));
+    }
+
+    private static boolean isAdmin(UserDetails user) {
+        return user.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
     }
 }

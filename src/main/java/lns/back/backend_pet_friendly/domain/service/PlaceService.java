@@ -2,12 +2,12 @@ package lns.back.backend_pet_friendly.domain.service;
 
 import lns.back.backend_pet_friendly.domain.model.Place;
 import lns.back.backend_pet_friendly.domain.port.in.PlaceUseCase;
-import lns.back.backend_pet_friendly.domain.port.in.SearchUseCase;
 import lns.back.backend_pet_friendly.domain.port.out.FileStoragePort;
 import lns.back.backend_pet_friendly.domain.port.out.PlaceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -40,11 +40,20 @@ public class PlaceService implements PlaceUseCase {
     }
 
     @Override
-    public Place update(UUID id, CreatePlaceCommand cmd) {
+    public Place update(UUID id, CreatePlaceCommand cmd, UUID requesterId, boolean isAdmin) {
         Place place = getById(id);
+        requireOwnerOrAdmin(place, requesterId, isAdmin);
         applyCommand(place, cmd);
         place.setUpdatedAt(Instant.now());
         return placeRepository.save(place);
+    }
+
+    /** Owner-only sauf ADMIN. Lieu sans propriétaire (owner SET NULL) → seul l'admin peut agir. */
+    private static void requireOwnerOrAdmin(Place place, UUID requesterId, boolean isAdmin) {
+        if (isAdmin) return;
+        if (place.getOwnerId() == null || !place.getOwnerId().equals(requesterId)) {
+            throw new AccessDeniedException("Not the owner of this place");
+        }
     }
 
     private static void applyCommand(Place place, CreatePlaceCommand cmd) {
@@ -58,14 +67,16 @@ public class PlaceService implements PlaceUseCase {
     }
 
     @Override
-    public void delete(UUID id) {
-        getById(id);
+    public void delete(UUID id, UUID requesterId, boolean isAdmin) {
+        Place place = getById(id);
+        requireOwnerOrAdmin(place, requesterId, isAdmin);
         placeRepository.delete(id);
     }
 
     @Override
-    public String uploadImage(UUID id, byte[] data, String filename, String contentType) {
+    public String uploadImage(UUID id, byte[] data, String filename, String contentType, UUID requesterId, boolean isAdmin) {
         Place place = getById(id);
+        requireOwnerOrAdmin(place, requesterId, isAdmin);
         String url = fileStoragePort.upload(data, filename, contentType);
         place.setImageUrl(url);
         place.setUpdatedAt(Instant.now());

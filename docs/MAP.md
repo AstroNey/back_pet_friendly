@@ -18,7 +18,10 @@ Index alphabétique-fonctionnel des concepts non-triviaux du projet. Évite les 
 | Generate refresh token | `infrastructure/security/JwtTokenAdapter.java:25` | jjwt, claim type=refresh, exp 7 j |
 | JWT validation | `infrastructure/security/JwtTokenAdapter.java:33` | `isValid` — try/catch parseSignedClaims |
 | Extract userId from JWT | `infrastructure/security/JwtTokenAdapter.java:30` | `extractUserId` — UUID depuis subject |
-| BCrypt configuration | `infrastructure/security/SecurityConfig.java:24` | `BCryptPasswordEncoder(12)` — strength 12, ~250 ms/hash |
+| BCrypt configuration | `infrastructure/security/SecurityConfig.java:25` | `BCryptPasswordEncoder(12)` — strength 12, ~250 ms/hash |
+| RBAC — rôle → authority | `infrastructure/security/UserDetailsServiceAdapter.java:26` | `ROLE_<role>` depuis `User.role` (USER/ADMIN). Propage aussi `enabled` (compte banni → login refusé) |
+| Method security + route admin | `infrastructure/security/SecurityConfig.java:22,40` | `@EnableMethodSecurity` + `/api/v1/admin/**` → `hasRole("ADMIN")`. Endpoints admin aussi annotés `@PreAuthorize` |
+| Ban (login bloqué si désactivé) | `domain/service/AuthService.java:54` | `login` refuse si `!user.isEnabled()` |
 | SecurityFilterChain (routes) | `infrastructure/security/SecurityConfig.java:29` | Routes publiques : `/auth/**`, GET `/places/**`, Swagger, h2-console |
 | JWT filter doFilterInternal | `infrastructure/security/JwtAuthFilter.java:24` | Parse Bearer, valide, peuple SecurityContext |
 | Load user by id | `infrastructure/security/UserDetailsServiceAdapter.java:21` | Bridge UserRepository → Spring Security `UserDetails` |
@@ -33,13 +36,16 @@ Index alphabétique-fonctionnel des concepts non-triviaux du projet. Évite les 
 | Édition review (auteur-only) | `domain/service/ReviewService.java` (`update`) | `PUT /api/v1/reviews/{id}` — remplace rating+text, recalcule place |
 | Recalcul rating/reviewCount place | `domain/service/ReviewService.java` (`recalcPlaceRating`) | Agrégat `count`+`AVG` depuis tous les avis (la liste en mémoire du Place est vide — mapper ignore). Appelé sur create/update/delete |
 | Doublon review → 409 | `web/exception/GlobalExceptionHandler.java` + `domain/exception/DuplicateReviewException.java` | Exception domaine (archi : domain.service ne peut throw web.*) |
-| Owner-only update place | `domain/service/PlaceService.java:52` | Voir condition d'ownership |
+| Owner-only place (update/delete/upload) | `domain/service/PlaceService.java` (`requireOwnerOrAdmin`) | `AccessDeniedException` (→ **403**) si requester ≠ `ownerId`, sauf ADMIN (bypass). Owner null → seul ADMIN. Câblé sur update/delete/uploadImage |
+| isAdmin depuis le JWT | `web/controller/PlaceController.java` (`isAdmin`) | Lit l'authority `ROLE_ADMIN` du `UserDetails`, passé aux use cases place |
 | Place : recalcul rating | `domain/model/Place.java:49` | `addReview` met à jour rating + reviewCount |
 | Coordinates validation | `domain/model/Coordinates.java:5` | Compact constructor, lat ∈ [-90,90], lng ∈ [-180,180] |
 | Distance Haversine | `domain/model/Coordinates.java:11` | `distanceTo(other)` en km |
 | Email unicité | `domain/service/AuthService.java:32` | Check `existsByEmail` au register |
 | Toggle favori | `domain/service/FavoriteService.java:26` | Add si absent, remove sinon |
-| User stats | `domain/service/UserService.java:39` | Agrège reviewsWritten + favoritesCount + placesAdded |
+| User stats | `domain/service/UserService.java:42` | Agrège reviewsWritten + favoritesCount + placesAdded |
+| Admin — gestion users | `domain/service/UserService.java` (`listAll`/`adminUpdate`/`delete`) | Liste paginée, update nom/rôle/enabled (null = inchangé), suppression définitive |
+| Resource not found → 404 | `domain/exception/ResourceNotFoundException.java` + `GlobalExceptionHandler` | Exception **domaine** (vs `web.ResourceNotFoundException` inutilisée). `UserService.getById` la lève |
 | Notification create | `domain/service/NotificationService.java:30` | Persiste + pousse via `NotificationSenderPort` |
 
 ## Persistence
@@ -86,6 +92,7 @@ Index alphabétique-fonctionnel des concepts non-triviaux du projet. Évite les 
 | Notification controller | `web/controller/NotificationController.java:23-55` | list, markRead, delete, clearAll |
 | User controller | `web/controller/UserController.java:24-47` | me (profil + stats), update |
 | User avatar upload (multipart) | `web/controller/UserController.java:60` | `POST /api/v1/users/me/avatar` — multipart, JWT, delegates to `userUseCase.uploadAvatar` |
+| Admin user controller | `web/controller/AdminUserController.java` | `/api/v1/admin/users` — list/get/update/delete, `@PreAuthorize("hasRole('ADMIN')")` au niveau classe |
 
 ## Bootstrapping & config
 

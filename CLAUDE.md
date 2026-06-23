@@ -89,6 +89,7 @@ src/main/java/lns/back/backend_pet_friendly/
 | `FavoriteController` /users/favorites | Favorites | auth |
 | `NotificationController` /notifications | Notifications | auth |
 | `UserController` /users | Users | auth |
+| `AdminUserController` /admin/users | Admin - Users | auth + rôle ADMIN (`@PreAuthorize`/`hasRole`) |
 
 `/search` (Places) : query params `q`, `type`, `animals`, `lat`, `lng`, `radius` (km). Avec lat/lng → ST_DWithin natif PostGIS, sinon fallback LIKE.
 
@@ -104,6 +105,7 @@ Ajout d'un endpoint :
 - `JwtAuthFilter` parse Bearer header, valide via `TokenPort.isValid()`, set `SecurityContext`
 - Routes publiques : `/api/v1/auth/*`, GET `/api/v1/places/*`, Swagger, h2-console
 - Stateless, CORS open, CSRF off
+- **RBAC** : `User.role` (enum `USER`/`ADMIN`) → authority `ROLE_<role>` dans `UserDetailsServiceAdapter`. `@EnableMethodSecurity` actif → `@PreAuthorize("hasRole('ADMIN')")` sur les controllers admin + garde `/api/v1/admin/**`. Compte `enabled=false` → login refusé (ban).
 
 ## Profiles & config
 

@@ -26,5 +26,8 @@ public class User {
     private boolean enabled = true;
 
     @Builder.Default
+    private Role role = Role.USER;
+
+    @Builder.Default
     private Instant createdAt = Instant.now();
 }

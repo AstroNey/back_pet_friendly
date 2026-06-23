@@ -131,4 +131,76 @@ class PlaceControllerIT {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isArray());
     }
+
+    @Test
+    void delete_byNonOwner_returns403() throws Exception {
+        String id = createPlace(token);
+        String otherToken = registerAndGetToken();
+        mockMvc.perform(delete("/api/v1/places/" + id)
+                        .header("Authorization", "Bearer " + otherToken))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void delete_byOwner_returns204() throws Exception {
+        String id = createPlace(token);
+        mockMvc.perform(delete("/api/v1/places/" + id)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void delete_byAdmin_returns204() throws Exception {
+        String id = createPlace(token);
+        String adminToken = loginAdmin();
+        mockMvc.perform(delete("/api/v1/places/" + id)
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void update_byNonOwner_returns403() throws Exception {
+        String id = createPlace(token);
+        String otherToken = registerAndGetToken();
+        Map<String, Object> req = Map.of("name", "Hack", "type", "CAFE", "address", "x",
+                "latitude", 48.85, "longitude", 2.35);
+        mockMvc.perform(put("/api/v1/places/" + id)
+                        .header("Authorization", "Bearer " + otherToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isForbidden());
+    }
+
+    private String createPlace(String authToken) throws Exception {
+        Map<String, Object> req = Map.of("name", "Owned", "type", "CAFE", "address", "1 Rue, Paris",
+                "latitude", 48.85, "longitude", 2.35);
+        MvcResult res = mockMvc.perform(post("/api/v1/places")
+                        .header("Authorization", "Bearer " + authToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        return objectMapper.readTree(res.getResponse().getContentAsString()).get("id").asText();
+    }
+
+    private String registerAndGetToken() throws Exception {
+        String email = "place-other-" + UUID.randomUUID() + "@test.com";
+        MvcResult res = mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                Map.of("email", email, "password", "password123", "name", "Other"))))
+                .andExpect(status().isCreated())
+                .andReturn();
+        return objectMapper.readTree(res.getResponse().getContentAsString()).get("token").asText();
+    }
+
+    private String loginAdmin() throws Exception {
+        MvcResult res = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                Map.of("email", "admin@petfriendly.fr", "password", "admin123"))))
+                .andExpect(status().isOk())
+                .andReturn();
+        return objectMapper.readTree(res.getResponse().getContentAsString()).get("token").asText();
+    }
 }

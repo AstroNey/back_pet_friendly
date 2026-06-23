@@ -25,6 +25,8 @@ public class UserDetailsServiceAdapter implements UserDetailsService {
 
     private UserDetails build(User user) {
         return new org.springframework.security.core.userdetails.User(
-            user.getId().toString(), user.getPasswordHash(), List.of(new SimpleGrantedAuthority("ROLE_USER")));
+            user.getId().toString(), user.getPasswordHash(), user.isEnabled(),
+            true, true, true,
+            List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())));
     }
 }

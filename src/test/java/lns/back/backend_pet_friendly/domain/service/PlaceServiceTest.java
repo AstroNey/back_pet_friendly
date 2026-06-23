@@ -15,6 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.util.List;
 import java.util.Optional;
@@ -32,15 +33,18 @@ class PlaceServiceTest {
     @InjectMocks PlaceService placeService;
 
     private Place existing;
+    private UUID ownerId;
 
     @BeforeEach
     void setUp() {
+        ownerId = UUID.randomUUID();
         existing = Place.builder()
                 .id(UUID.randomUUID())
                 .name("Park")
                 .type(PlaceType.PARC)
                 .address("Paris")
                 .coordinates(new Coordinates(48.85, 2.35))
+                .ownerId(ownerId)
                 .build();
     }
 
@@ -87,16 +91,53 @@ class PlaceServiceTest {
 
         CreatePlaceCommand cmd = new CreatePlaceCommand("NewName", PlaceType.HOTEL, "Nice",
                 new Coordinates(43.7, 7.26), null, "new-desc", null, null);
-        Place updated = placeService.update(existing.getId(), cmd);
+        Place updated = placeService.update(existing.getId(), cmd, ownerId, false);
 
         assertThat(updated.getName()).isEqualTo("NewName");
         assertThat(updated.getType()).isEqualTo(PlaceType.HOTEL);
     }
 
     @Test
+    void update_notOwner_throwsAccessDenied() {
+        when(placeRepository.findById(existing.getId())).thenReturn(Optional.of(existing));
+        CreatePlaceCommand cmd = new CreatePlaceCommand("X", PlaceType.HOTEL, "Nice",
+                new Coordinates(43.7, 7.26), null, "d", null, null);
+
+        assertThatThrownBy(() -> placeService.update(existing.getId(), cmd, UUID.randomUUID(), false))
+                .isInstanceOf(AccessDeniedException.class);
+        verify(placeRepository, never()).save(any());
+    }
+
+    @Test
+    void update_admin_bypassesOwnership() {
+        when(placeRepository.findById(existing.getId())).thenReturn(Optional.of(existing));
+        when(placeRepository.save(any(Place.class))).thenAnswer(inv -> inv.getArgument(0));
+        CreatePlaceCommand cmd = new CreatePlaceCommand("AdminEdit", PlaceType.HOTEL, "Nice",
+                new Coordinates(43.7, 7.26), null, "d", null, null);
+
+        Place updated = placeService.update(existing.getId(), cmd, UUID.randomUUID(), true);
+        assertThat(updated.getName()).isEqualTo("AdminEdit");
+    }
+
+    @Test
     void delete_existing_callsRepository() {
         when(placeRepository.findById(existing.getId())).thenReturn(Optional.of(existing));
-        placeService.delete(existing.getId());
+        placeService.delete(existing.getId(), ownerId, false);
+        verify(placeRepository).delete(existing.getId());
+    }
+
+    @Test
+    void delete_notOwner_throwsAccessDenied() {
+        when(placeRepository.findById(existing.getId())).thenReturn(Optional.of(existing));
+        assertThatThrownBy(() -> placeService.delete(existing.getId(), UUID.randomUUID(), false))
+                .isInstanceOf(AccessDeniedException.class);
+        verify(placeRepository, never()).delete(any());
+    }
+
+    @Test
+    void delete_admin_bypassesOwnership() {
+        when(placeRepository.findById(existing.getId())).thenReturn(Optional.of(existing));
+        placeService.delete(existing.getId(), UUID.randomUUID(), true);
         verify(placeRepository).delete(existing.getId());
     }
 
@@ -104,7 +145,7 @@ class PlaceServiceTest {
     void delete_notFound_throws() {
         UUID id = UUID.randomUUID();
         when(placeRepository.findById(id)).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> placeService.delete(id)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> placeService.delete(id, ownerId, false)).isInstanceOf(IllegalArgumentException.class);
         verify(placeRepository, never()).delete(any());
     }
 
@@ -114,9 +155,17 @@ class PlaceServiceTest {
         when(fileStoragePort.upload(any(), any(), any())).thenReturn("https://s3/image.jpg");
         when(placeRepository.save(any(Place.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        String url = placeService.uploadImage(existing.getId(), new byte[]{1,2,3}, "img.jpg", "image/jpeg");
+        String url = placeService.uploadImage(existing.getId(), new byte[]{1,2,3}, "img.jpg", "image/jpeg", ownerId, false);
 
         assertThat(url).isEqualTo("https://s3/image.jpg");
         assertThat(existing.getImageUrl()).isEqualTo("https://s3/image.jpg");
+    }
+
+    @Test
+    void uploadImage_notOwner_throwsAccessDenied() {
+        when(placeRepository.findById(existing.getId())).thenReturn(Optional.of(existing));
+        assertThatThrownBy(() -> placeService.uploadImage(existing.getId(), new byte[]{1}, "i.jpg", "image/jpeg", UUID.randomUUID(), false))
+                .isInstanceOf(AccessDeniedException.class);
+        verify(fileStoragePort, never()).upload(any(), any(), any());
     }
 }
