@@ -53,6 +53,10 @@ public class AuthService implements AuthUseCase {
         return issueTokens(user);
     }
 
+    /**
+     * Rotation du refresh token : on révoque l'ancien hash et on émet une paire neuve à chaque
+     * usage. Un token rejoué (déjà rotaté) échoue donc au check {@code isActive} → anti-replay.
+     */
     @Override
     public AuthResult refresh(String refreshToken) {
         if (!tokenPort.isValid(refreshToken)) {

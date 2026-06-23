@@ -39,14 +39,19 @@ public class NotificationService implements NotificationUseCase {
                 .createdAt(Instant.now())
                 .build());
 
-        Map<String, String> data = new HashMap<>();
-        data.put("notificationId", saved.getId().toString());
-        data.put("type", saved.getType().name());
-        if (cmd.payload() != null) {
-            cmd.payload().forEach((k, v) -> data.put(k, String.valueOf(v)));
-        }
-        notificationSender.sendPush(cmd.userId(), cmd.title(), cmd.body(), data);
+        notificationSender.sendPush(cmd.userId(), cmd.title(), cmd.body(), buildPushData(saved));
         return saved;
+    }
+
+    /** Map FCM = identifiants de la notif + payload métier aplati en String/String. */
+    private static Map<String, String> buildPushData(Notification notification) {
+        Map<String, String> data = new HashMap<>();
+        data.put("notificationId", notification.getId().toString());
+        data.put("type", notification.getType().name());
+        if (notification.getPayload() != null) {
+            notification.getPayload().forEach((k, v) -> data.put(k, String.valueOf(v)));
+        }
+        return data;
     }
 
     @Override

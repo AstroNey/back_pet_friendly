@@ -34,23 +34,20 @@ public class PlaceService implements PlaceUseCase {
 
     @Override
     public Place create(CreatePlaceCommand cmd) {
-        Place place = Place.builder()
-                .id(UUID.randomUUID())
-                .name(cmd.name())
-                .type(cmd.type())
-                .address(cmd.address())
-                .coordinates(cmd.coordinates())
-                .animals(cmd.animals() != null ? cmd.animals() : new ArrayList<>())
-                .description(cmd.description())
-                .hours(cmd.hours())
-                .ownerId(cmd.ownerId())
-                .build();
+        Place place = Place.builder().id(UUID.randomUUID()).ownerId(cmd.ownerId()).build();
+        applyCommand(place, cmd);
         return placeRepository.save(place);
     }
 
     @Override
     public Place update(UUID id, CreatePlaceCommand cmd) {
         Place place = getById(id);
+        applyCommand(place, cmd);
+        place.setUpdatedAt(Instant.now());
+        return placeRepository.save(place);
+    }
+
+    private static void applyCommand(Place place, CreatePlaceCommand cmd) {
         place.setName(cmd.name());
         place.setType(cmd.type());
         place.setAddress(cmd.address());
@@ -58,8 +55,6 @@ public class PlaceService implements PlaceUseCase {
         place.setAnimals(cmd.animals() != null ? cmd.animals() : new ArrayList<>());
         place.setDescription(cmd.description());
         place.setHours(cmd.hours());
-        place.setUpdatedAt(Instant.now());
-        return placeRepository.save(place);
     }
 
     @Override
