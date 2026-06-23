@@ -1,5 +1,6 @@
 package lns.back.backend_pet_friendly.domain.service;
 
+import lns.back.backend_pet_friendly.domain.exception.ResourceNotFoundException;
 import lns.back.backend_pet_friendly.domain.model.User;
 import lns.back.backend_pet_friendly.domain.port.in.UserUseCase.UpdateProfileCommand;
 import lns.back.backend_pet_friendly.domain.port.in.UserUseCase.UserStats;
@@ -51,7 +52,7 @@ class UserServiceTest {
         UUID id = UUID.randomUUID();
         when(userRepository.findById(id)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> userService.getById(id))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("User not found");
     }
 

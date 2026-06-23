@@ -150,6 +150,23 @@ class PlaceServiceTest {
     }
 
     @Test
+    void deleteAll_deletesExisting_ignoresMissing_andCounts() {
+        UUID present1 = UUID.randomUUID();
+        UUID present2 = UUID.randomUUID();
+        UUID missing  = UUID.randomUUID();
+        when(placeRepository.findById(present1)).thenReturn(Optional.of(existing));
+        when(placeRepository.findById(present2)).thenReturn(Optional.of(existing));
+        when(placeRepository.findById(missing)).thenReturn(Optional.empty());
+
+        int deleted = placeService.deleteAll(List.of(present1, present2, missing));
+
+        assertThat(deleted).isEqualTo(2);
+        verify(placeRepository).delete(present1);
+        verify(placeRepository).delete(present2);
+        verify(placeRepository, never()).delete(missing);
+    }
+
+    @Test
     void uploadImage_savesUrlToPlace() {
         when(placeRepository.findById(existing.getId())).thenReturn(Optional.of(existing));
         when(fileStoragePort.upload(any(), any(), any())).thenReturn("https://s3/image.jpg");

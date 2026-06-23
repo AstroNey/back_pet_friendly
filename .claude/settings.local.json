@@ -24,7 +24,11 @@
       "mcp__ide__getDiagnostics",
       "Bash(JAVA_HOME=/c/Users/nicol/.jdks/ms-21.0.10 ./mvnw clean test-compile -q)",
       "Bash(echo \"EXIT: $?\")",
-      "Bash(./mvnw -q test -Dtest='AdminUserControllerIT,ArchitectureTest,UserControllerIT,GlobalExceptionHandlerTest,AuthControllerIT')"
+      "Bash(./mvnw -q test -Dtest='AdminUserControllerIT,ArchitectureTest,UserControllerIT,GlobalExceptionHandlerTest,AuthControllerIT')",
+      "Bash(JAVA_HOME=/c/Users/nicol/.jdks/ms-21.0.10 ./mvnw clean compile -q)",
+      "Bash(JAVA_HOME=/c/Users/nicol/.jdks/ms-21.0.10 ./mvnw test -Dtest=\"PlaceServiceTest,ReviewServiceTest,UserServiceTest,ArchitectureTest\" -q)",
+      "Bash(JAVA_HOME=/c/Users/nicol/.jdks/ms-21.0.10 ./mvnw test -Dtest=\"PlaceServiceTest,ReviewServiceTest,UserServiceTest,ArchitectureTest\")",
+      "Bash(JAVA_HOME=/c/Users/nicol/.jdks/ms-21.0.10 ./mvnw test -Dtest=\"PlaceServiceTest,ArchitectureTest\")"
     ]
   }
 }

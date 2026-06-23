@@ -5,6 +5,7 @@ import lns.back.backend_pet_friendly.domain.model.Coordinates;
 import lns.back.backend_pet_friendly.domain.model.Place;
 import lns.back.backend_pet_friendly.domain.model.PlaceType;
 import lns.back.backend_pet_friendly.domain.model.Review;
+import lns.back.backend_pet_friendly.domain.model.ReviewStatus;
 import lns.back.backend_pet_friendly.domain.model.User;
 import lns.back.backend_pet_friendly.domain.port.in.ReviewUseCase.CreateReviewCommand;
 import lns.back.backend_pet_friendly.domain.port.in.ReviewUseCase.UpdateReviewCommand;
@@ -50,15 +51,17 @@ class ReviewServiceTest {
         when(reviewRepository.existsByPlaceIdAndAuthorId(place.getId(), author.getId())).thenReturn(false);
         when(userRepository.findById(author.getId())).thenReturn(Optional.of(author));
         when(reviewRepository.save(any(Review.class))).thenAnswer(inv -> inv.getArgument(0));
-        // Le lieu a déjà 3 avis (moyenne 3.0) en base → recalcul depuis l'agrégat, pas la liste en mémoire.
-        when(reviewRepository.countByPlaceId(place.getId())).thenReturn(3L);
-        when(reviewRepository.averageRatingByPlaceId(place.getId())).thenReturn(3.0);
+        // Le lieu a déjà 3 avis APPROVED (moyenne 3.0) en base → recalcul depuis l'agrégat approuvé.
+        when(reviewRepository.countApprovedByPlaceId(place.getId())).thenReturn(3L);
+        when(reviewRepository.averageApprovedRatingByPlaceId(place.getId())).thenReturn(3.0);
 
         Review review = reviewService.create(place.getId(), new CreateReviewCommand(author.getId(), 4.5, "Great!"));
 
         assertThat(review.getRating()).isEqualTo(4.5);
         assertThat(review.getAuthorName()).isEqualTo("Alice");
-        // Bug A corrigé : reviewCount = agrégat réel (3), pas 1 ; rating = moyenne réelle (3.0), pas la dernière note.
+        // Un nouvel avis est PENDING : invisible et non compté tant que non approuvé.
+        assertThat(review.getStatus()).isEqualTo(ReviewStatus.PENDING);
+        // reviewCount/rating = agrégat APPROVED réel (3 / 3.0), le PENDING ne compte pas.
         assertThat(place.getReviewCount()).isEqualTo(3);
         assertThat(place.getRating()).isEqualTo(3.0);
         verify(placeRepository).save(place);
@@ -80,17 +83,23 @@ class ReviewServiceTest {
     void update_byAuthor_updatesAndRecalculatesPlace() {
         Review review = Review.builder().id(UUID.randomUUID()).placeId(place.getId())
                 .authorId(author.getId()).rating(2.0).text("meh").build();
+        review.setStatus(ReviewStatus.APPROVED);
         when(reviewRepository.findById(review.getId())).thenReturn(Optional.of(review));
         when(reviewRepository.save(any(Review.class))).thenAnswer(inv -> inv.getArgument(0));
         when(placeRepository.findById(place.getId())).thenReturn(Optional.of(place));
-        when(reviewRepository.countByPlaceId(place.getId())).thenReturn(1L);
-        when(reviewRepository.averageRatingByPlaceId(place.getId())).thenReturn(5.0);
+        when(reviewRepository.countApprovedByPlaceId(place.getId())).thenReturn(0L);
 
         Review updated = reviewService.update(review.getId(), author.getId(), new UpdateReviewCommand(5.0, "top"));
 
         assertThat(updated.getRating()).isEqualTo(5.0);
         assertThat(updated.getText()).isEqualTo("top");
-        assertThat(place.getRating()).isEqualTo(5.0);
+        // Ré-édition → repasse en modération (PENDING) et perd la traçabilité de modération.
+        assertThat(updated.getStatus()).isEqualTo(ReviewStatus.PENDING);
+        assertThat(updated.getModeratedAt()).isNull();
+        assertThat(updated.getModeratedBy()).isNull();
+        // Plus aucun avis APPROVED → note du lieu remise à 0.
+        assertThat(place.getRating()).isEqualTo(0.0);
+        assertThat(place.getReviewCount()).isEqualTo(0);
         verify(placeRepository).save(place);
     }
 
@@ -143,5 +152,44 @@ class ReviewServiceTest {
         when(reviewRepository.findById(id)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> reviewService.delete(id, author.getId()))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void moderate_approve_setsStatusTraceabilityAndRecalculatesPlace() {
+        UUID adminId = UUID.randomUUID();
+        Review review = Review.builder().id(UUID.randomUUID()).placeId(place.getId())
+                .authorId(author.getId()).rating(4.0).status(ReviewStatus.PENDING).build();
+        when(reviewRepository.findById(review.getId())).thenReturn(Optional.of(review));
+        when(reviewRepository.save(any(Review.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(placeRepository.findById(place.getId())).thenReturn(Optional.of(place));
+        when(reviewRepository.countApprovedByPlaceId(place.getId())).thenReturn(1L);
+        when(reviewRepository.averageApprovedRatingByPlaceId(place.getId())).thenReturn(4.0);
+
+        Review moderated = reviewService.moderate(review.getId(), adminId, ReviewStatus.APPROVED);
+
+        assertThat(moderated.getStatus()).isEqualTo(ReviewStatus.APPROVED);
+        assertThat(moderated.getModeratedAt()).isNotNull();
+        assertThat(moderated.getModeratedBy()).isEqualTo(adminId);
+        // Avis désormais APPROVED → compté dans la note du lieu.
+        assertThat(place.getRating()).isEqualTo(4.0);
+        assertThat(place.getReviewCount()).isEqualTo(1);
+        assertThat(moderated.getPlaceName()).isEqualTo("Park");
+    }
+
+    @Test
+    void moderate_invalidStatus_throws() {
+        assertThatThrownBy(() -> reviewService.moderate(UUID.randomUUID(), UUID.randomUUID(), ReviewStatus.PENDING))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("APPROVED or REJECTED");
+        verify(reviewRepository, never()).save(any());
+    }
+
+    @Test
+    void moderate_notFound_throws() {
+        UUID id = UUID.randomUUID();
+        when(reviewRepository.findById(id)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> reviewService.moderate(id, UUID.randomUUID(), ReviewStatus.APPROVED))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Review not found");
     }
 }

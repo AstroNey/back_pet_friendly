@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -71,6 +72,18 @@ public class PlaceService implements PlaceUseCase {
         Place place = getById(id);
         requireOwnerOrAdmin(place, requesterId, isAdmin);
         placeRepository.delete(id);
+    }
+
+    @Override
+    public int deleteAll(List<UUID> ids) {
+        int deleted = 0;
+        for (UUID id : ids) {
+            if (placeRepository.findById(id).isPresent()) {
+                placeRepository.delete(id);
+                deleted++;
+            }
+        }
+        return deleted;
     }
 
     @Override

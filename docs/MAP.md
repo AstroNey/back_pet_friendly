@@ -31,12 +31,19 @@ Index alphabétique-fonctionnel des concepts non-triviaux du projet. Évite les 
 
 | Concept | Fichier:ligne | Détail |
 |---|---|---|
-| 1 review par user et par place | `domain/service/ReviewService.java:39` | Check `existsByPlaceIdAndAuthorId` → `DuplicateReviewException` (→ **409**) |
+| 1 review par user et par place | `domain/service/ReviewService.java` (`create`) | Check `existsByPlaceIdAndAuthorId` → `DuplicateReviewException` (→ **409**) |
+| Modération avis (statut) | `domain/model/ReviewStatus.java` + `domain/model/Review.java` | Enum PENDING/APPROVED/REJECTED + `status`/`moderatedAt`/`moderatedBy`. Nouvel avis = PENDING |
+| Lecture publique APPROVED only | `domain/service/ReviewService.java` (`getByPlace`) | `findApprovedByPlaceId` — seuls les APPROVED listés. Idem recalc note (`countApprovedByPlaceId`/`averageApprovedRatingByPlaceId`) |
+| Mes avis (tous statuts) | `domain/service/ReviewService.java` (`getByAuthor`) + `web/controller/ReviewController.java` (`getMyReviews`) | `GET /api/v1/users/me/reviews` — l'auteur voit ses PENDING/REJECTED |
+| Modérer un avis (ADMIN) | `domain/service/ReviewService.java` (`moderate`) + `web/controller/AdminReviewController.java` | `GET/PATCH /api/v1/admin/reviews` — approuve/rejette, set moderatedAt/By, recalc place. `placeName` peuplé via `enrichPlaceName` |
+| Re-modération sur édition | `domain/service/ReviewService.java` (`update`) | PUT par l'auteur → repasse `status=PENDING`, reset moderatedAt/By |
 | Author-only delete review | `domain/service/ReviewService.java` | `delete`/`update` lancent `AccessDeniedException` si `authorId != requesterId` |
 | Édition review (auteur-only) | `domain/service/ReviewService.java` (`update`) | `PUT /api/v1/reviews/{id}` — remplace rating+text, recalcule place |
 | Recalcul rating/reviewCount place | `domain/service/ReviewService.java` (`recalcPlaceRating`) | Agrégat `count`+`AVG` depuis tous les avis (la liste en mémoire du Place est vide — mapper ignore). Appelé sur create/update/delete |
 | Doublon review → 409 | `web/exception/GlobalExceptionHandler.java` + `domain/exception/DuplicateReviewException.java` | Exception domaine (archi : domain.service ne peut throw web.*) |
 | Owner-only place (update/delete/upload) | `domain/service/PlaceService.java` (`requireOwnerOrAdmin`) | `AccessDeniedException` (→ **403**) si requester ≠ `ownerId`, sauf ADMIN (bypass). Owner null → seul ADMIN. Câblé sur update/delete/uploadImage |
+| Suppression lieux en lot (ADMIN) | `domain/service/PlaceService.java` (`deleteAll`) + `web/controller/AdminPlaceController.java` | `DELETE /api/v1/admin/places` body `{ids:[...]}` → supprime le lot, ignore ids inexistants, renvoie `{requested,deleted}`. `@PreAuthorize("hasRole('ADMIN')")` |
+| Import lieux en masse (ADMIN) | `domain/service/PlaceImportService.java` + `web/controller/AdminPlaceController.java` + `infrastructure/async/PlaceImportExecutorAdapter.java` | `POST /api/v1/admin/places/import` multipart JSON (jusqu'à 10k lieux) → 202 + `{jobId}`. `GET /api/v1/admin/places/import/{jobId}` pour suivre. Async via `ImportProcessorPort` (`@Async` en infra). Job persisté en DB (`import_jobs`). |
 | isAdmin depuis le JWT | `web/controller/PlaceController.java` (`isAdmin`) | Lit l'authority `ROLE_ADMIN` du `UserDetails`, passé aux use cases place |
 | Place : recalcul rating | `domain/model/Place.java:49` | `addReview` met à jour rating + reviewCount |
 | Coordinates validation | `domain/model/Coordinates.java:5` | Compact constructor, lat ∈ [-90,90], lng ∈ [-180,180] |
@@ -58,6 +65,7 @@ Index alphabétique-fonctionnel des concepts non-triviaux du projet. Évite les 
 | Animaux acceptés (stockage) | `infrastructure/persistence/entity/PlaceJpaEntity.java:27` | `@ElementCollection` → table `place_animals(place_id, animal)`, `@Enumerated(STRING)`. **Pas** colonne JSON |
 | Favoris d'un user | `infrastructure/persistence/repository/PlaceJpaRepository.java:18` | JOIN `FavoriteJpaEntity` sur `(userId, placeId)` |
 | Migration init | `src/main/resources/db/migration/V1__init_schema.sql` | Extensions UUID-OSSP + PostGIS, toutes tables, GIN FR sur `places.name` |
+| Migration modération avis | `src/main/resources/db/migration/V2__review_moderation.sql` | Colonnes `status`/`moderated_at`/`moderated_by` + index. Grandfather : avis existants → APPROVED |
 
 ## Mapping & ports
 

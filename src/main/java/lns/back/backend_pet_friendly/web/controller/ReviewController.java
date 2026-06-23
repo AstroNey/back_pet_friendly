@@ -21,12 +21,28 @@ import java.util.UUID;
 public class ReviewController {
     private final ReviewUseCase reviewUseCase;
 
-    @Operation(summary = "List reviews of a place", description = "Paginated, ordered by recency. Public endpoint.")
+    @Operation(summary = "List reviews of a place",
+            description = "Paginated, ordered by recency. Public endpoint. Renvoie UNIQUEMENT les avis APPROVED. "
+                    + "Un auteur voit ses propres avis PENDING/REJECTED via GET /api/v1/users/me/reviews.")
     @SecurityRequirements
     @GetMapping("/places/{placeId}/reviews")
     public ResponseEntity<PageResponse<ReviewResponse>> getByPlace(@PathVariable UUID placeId,
             @RequestParam(defaultValue="0") int page, @RequestParam(defaultValue="10") int size) {
         return ResponseEntity.ok(new PageResponse<>(reviewUseCase.getByPlace(placeId, page, size).map(ReviewResponse::from)));
+    }
+
+    @Operation(summary = "List my reviews",
+            description = "Authenticated. Renvoie TOUS les avis de l'utilisateur courant, quel que soit leur statut "
+                    + "(PENDING/APPROVED/REJECTED), avec le champ status. Permet à l'auteur de suivre la modération de ses avis.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Page des avis de l'utilisateur courant"),
+        @ApiResponse(responseCode = "401", description = "Missing or invalid JWT")
+    })
+    @GetMapping("/users/me/reviews")
+    public ResponseEntity<PageResponse<ReviewResponse>> getMyReviews(@AuthenticationPrincipal UserDetails user,
+            @RequestParam(defaultValue="0") int page, @RequestParam(defaultValue="10") int size) {
+        UUID authorId = UUID.fromString(user.getUsername());
+        return ResponseEntity.ok(new PageResponse<>(reviewUseCase.getByAuthor(authorId, page, size).map(ReviewResponse::from)));
     }
 
     @Operation(summary = "Create review", description = "Authenticated. The author is the current user. One review per user and per place.")

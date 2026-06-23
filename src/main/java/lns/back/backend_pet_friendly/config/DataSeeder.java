@@ -128,6 +128,7 @@ public class DataSeeder implements CommandLineRunner {
             case HOTEL -> "Hôtel";
             case PARC -> "Parc";
             case COMMERCE -> "Boutique";
+            case ANIMALERIE -> "Animalerie";
         };
     }
 

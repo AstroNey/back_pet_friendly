@@ -28,5 +28,7 @@ public interface PlaceUseCase {
     Place create(CreatePlaceCommand command);
     Place update(UUID id, CreatePlaceCommand command, UUID requesterId, boolean isAdmin);
     void delete(UUID id, UUID requesterId, boolean isAdmin);
+    /** Suppression multiple réservée à l'ADMIN. Ignore les ids inexistants. Renvoie le nombre réellement supprimé. */
+    int deleteAll(List<UUID> ids);
     String uploadImage(UUID id, byte[] data, String filename, String contentType, UUID requesterId, boolean isAdmin);
 }
