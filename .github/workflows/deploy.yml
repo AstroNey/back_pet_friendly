@@ -55,19 +55,26 @@ jobs:
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
+    env:
+      VM_HOST: ${{ secrets.VM_HOST }}
+      VM_USER: ${{ secrets.VM_USER }}
+      VM_PORT: ${{ secrets.VM_SSH_PORT || 22 }}
+      VM_APP_DIR: ${{ secrets.VM_APP_DIR }}
+      SSH_KEY_B64: ${{ secrets.VM_SSH_KEY_B64 }}
+      GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GHCR_USER: ${{ github.actor }}
     steps:
       - name: Deploy over SSH
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.VM_HOST }}
-          username: ${{ secrets.VM_USER }}
-          key: ${{ secrets.VM_SSH_KEY }}
-          port: ${{ secrets.VM_SSH_PORT || 22 }}
-          script: |
-            set -e
-            cd ${{ secrets.VM_APP_DIR }}
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            git pull --ff-only
-            docker compose -f docker-compose.prod.yml -f docker-compose.deploy.yml pull app
-            docker compose -f docker-compose.prod.yml -f docker-compose.deploy.yml up -d --remove-orphans
-            docker image prune -f
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY_B64" | base64 -d > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "$VM_PORT" -H "$VM_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh -i ~/.ssh/deploy_key -p "$VM_PORT" -o StrictHostKeyChecking=accept-new "$VM_USER@$VM_HOST" \
+            "set -e
+             cd '$VM_APP_DIR'
+             echo '$GHCR_TOKEN' | docker login ghcr.io -u '$GHCR_USER' --password-stdin
+             git pull --ff-only
+             docker compose -f docker-compose.prod.yml -f docker-compose.deploy.yml pull app
+             docker compose -f docker-compose.prod.yml -f docker-compose.deploy.yml up -d --remove-orphans
+             docker image prune -f"
