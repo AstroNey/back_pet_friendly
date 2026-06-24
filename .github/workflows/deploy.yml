@@ -75,6 +75,6 @@ jobs:
              cd '$VM_APP_DIR'
              echo '$GHCR_TOKEN' | docker login ghcr.io -u '$GHCR_USER' --password-stdin
              git pull --ff-only
-             docker compose -f docker-compose.prod.yml -f docker-compose.deploy.yml pull app
-             docker compose -f docker-compose.prod.yml -f docker-compose.deploy.yml up -d --remove-orphans
+             docker compose --env-file .env.prod -f docker-compose.prod.yml -f docker-compose.deploy.yml pull app
+             docker compose --env-file .env.prod -f docker-compose.prod.yml -f docker-compose.deploy.yml up -d --remove-orphans
              docker image prune -f"
