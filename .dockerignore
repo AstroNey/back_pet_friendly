@@ -1,0 +1,35 @@
+# Build artifacts (image builds from src/ in multi-stage, target/ not needed)
+target/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# CI / deploy local
+.github/
+.env
+.env.*
+!.env.prod.example
+docker-compose*.yml
+Dockerfile
+Caddyfile
+
+# Docs
+docs/
+*.md
+openapi.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs / runtime
+*.log
+var/
+backups/

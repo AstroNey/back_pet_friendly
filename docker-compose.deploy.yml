@@ -1,0 +1,9 @@
+# Override pour deploy CI : l'app est tirée depuis GHCR (image construite par GitHub Actions),
+# pas de build sur la VM 1GB.
+# Usage VM : docker compose -f docker-compose.prod.yml -f docker-compose.deploy.yml pull && up -d
+name: petfriendly-prod
+
+services:
+  app:
+    build: !reset null
+    image: ${APP_IMAGE:-ghcr.io/astroney/back_pet_friendly:latest}
