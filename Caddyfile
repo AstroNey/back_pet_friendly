@@ -1,10 +1,6 @@
 # Adresse du site = valeur de $SITE_ADDRESS.
-#   - HTTPS auto (Let's Encrypt) : SITE_ADDRESS=api.tondomaine.fr  (+ EMAIL renseigné)
+#   - HTTPS auto (Let's Encrypt) : SITE_ADDRESS=api.tondomaine.fr
 #   - HTTP seul sur IP (pas de domaine) : SITE_ADDRESS=:80
-{
-    email {$EMAIL}
-}
-
 {$SITE_ADDRESS::80} {
     encode zstd gzip
 
