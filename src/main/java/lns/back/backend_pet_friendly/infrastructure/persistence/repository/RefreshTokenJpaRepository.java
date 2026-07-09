@@ -19,4 +19,10 @@ public interface RefreshTokenJpaRepository extends JpaRepository<RefreshTokenJpa
     @Transactional
     @Query("UPDATE RefreshTokenJpaEntity t SET t.revokedAt = :now WHERE t.userId = :userId AND t.revokedAt IS NULL")
     void revokeAllByUserId(@Param("userId") UUID userId, @Param("now") Instant now);
+
+    /** Révocation atomique conditionnelle : renvoie le nombre de lignes affectées (1 = gagnant, 0 = déjà révoqué/expiré/absent). */
+    @Modifying
+    @Transactional
+    @Query("UPDATE RefreshTokenJpaEntity t SET t.revokedAt = :now WHERE t.tokenHash = :tokenHash AND t.revokedAt IS NULL AND t.expiresAt > :now")
+    int revokeIfActive(@Param("tokenHash") String tokenHash, @Param("now") Instant now);
 }

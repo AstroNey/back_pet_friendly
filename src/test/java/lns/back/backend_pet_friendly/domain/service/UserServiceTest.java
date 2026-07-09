@@ -7,6 +7,7 @@ import lns.back.backend_pet_friendly.domain.port.in.UserUseCase.UserStats;
 import lns.back.backend_pet_friendly.domain.port.out.FavoriteRepository;
 import lns.back.backend_pet_friendly.domain.port.out.FileStoragePort;
 import lns.back.backend_pet_friendly.domain.port.out.PlaceRepository;
+import lns.back.backend_pet_friendly.domain.port.out.RefreshTokenRepository;
 import lns.back.backend_pet_friendly.domain.port.out.ReviewRepository;
 import lns.back.backend_pet_friendly.domain.port.out.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,6 +33,7 @@ class UserServiceTest {
     @Mock FavoriteRepository favoriteRepository;
     @Mock PlaceRepository placeRepository;
     @Mock FileStoragePort fileStoragePort;
+    @Mock RefreshTokenRepository refreshTokenRepository;
     @InjectMocks UserService userService;
 
     private User user;

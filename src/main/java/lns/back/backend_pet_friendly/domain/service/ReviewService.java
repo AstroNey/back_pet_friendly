@@ -14,12 +14,14 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class ReviewService implements ReviewUseCase {
 
     private final ReviewRepository reviewRepository;
@@ -39,6 +41,7 @@ public class ReviewService implements ReviewUseCase {
     }
 
     @Override
+    @Transactional
     public Review create(UUID placeId, CreateReviewCommand cmd) {
         placeRepository.findById(placeId)
                 .orElseThrow(() -> new IllegalArgumentException("Place not found: " + placeId));
@@ -66,6 +69,7 @@ public class ReviewService implements ReviewUseCase {
     }
 
     @Override
+    @Transactional
     public Review update(UUID reviewId, UUID requesterId, UpdateReviewCommand cmd) {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new IllegalArgumentException("Review not found: " + reviewId));
@@ -84,6 +88,7 @@ public class ReviewService implements ReviewUseCase {
     }
 
     @Override
+    @Transactional
     public void delete(UUID reviewId, UUID requesterId) {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new IllegalArgumentException("Review not found: " + reviewId));
@@ -103,6 +108,7 @@ public class ReviewService implements ReviewUseCase {
     }
 
     @Override
+    @Transactional
     public Review moderate(UUID reviewId, UUID adminId, ReviewStatus newStatus) {
         if (newStatus != ReviewStatus.APPROVED && newStatus != ReviewStatus.REJECTED) {
             throw new IllegalArgumentException("Moderation status must be APPROVED or REJECTED");

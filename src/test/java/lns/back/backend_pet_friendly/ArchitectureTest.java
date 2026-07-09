@@ -23,5 +23,5 @@ public class ArchitectureTest {
     static final ArchRule domain_services_only_use_domain =
         classes().that().resideInAPackage("..domain.service..")
             .should().onlyDependOnClassesThat()
-            .resideInAnyPackage("..domain..", "java..", "org.slf4j..", "org.springframework.stereotype..", "org.springframework.security..", "org.springframework.data.domain..", "lombok..");
+            .resideInAnyPackage("..domain..", "java..", "org.slf4j..", "org.springframework.stereotype..", "org.springframework.security..", "org.springframework.data.domain..", "org.springframework.transaction..", "lombok..");
 }

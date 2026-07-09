@@ -9,6 +9,7 @@ import lns.back.backend_pet_friendly.domain.port.out.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -17,6 +18,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class AuthService implements AuthUseCase {
 
     private static final long ACCESS_TOKEN_TTL_SECONDS = 900L;
@@ -57,32 +59,26 @@ public class AuthService implements AuthUseCase {
     }
 
     /**
-     * Rotation du refresh token : on révoque l'ancien hash et on émet une paire neuve à chaque
-     * usage. Un token rejoué (déjà rotaté) échoue donc au check {@code isActive} → anti-replay.
+     * Rotation du refresh token : révocation atomique de l'ancien hash + émission d'une paire neuve.
+     * La révocation conditionnelle ({@code revokeIfActive}) garantit qu'un seul appel réussit en cas
+     * de rotation concurrente : un token rejoué (déjà rotaté) reçoit {@code false} → anti-replay/race.
+     * Compte banni ({@code enabled=false}) refusé avant toute émission.
      */
     @Override
     public AuthResult refresh(String refreshToken) {
         if (!tokenPort.isValid(refreshToken)) {
             throw new IllegalArgumentException("Invalid refresh token");
         }
-        String hash = TokenHasher.sha256(refreshToken);
-        RefreshToken stored = refreshTokenRepository.findByTokenHash(hash)
-                .orElseThrow(() -> new IllegalArgumentException("Refresh token not found"));
-        if (!stored.isActive()) {
-            throw new IllegalArgumentException("Refresh token is revoked or expired");
-        }
         UUID userId = tokenPort.extractUserId(refreshToken);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         if (!user.isEnabled()) {
-            // Compte banni : révoquer toute la famille et refuser le rafraîchissement.
-            refreshTokenRepository.revokeAllByUserId(userId);
             throw new IllegalArgumentException("Account is disabled");
         }
-
-        stored.setRevokedAt(Instant.now());
-        refreshTokenRepository.save(stored);
-
+        String hash = TokenHasher.sha256(refreshToken);
+        if (!refreshTokenRepository.revokeIfActive(hash, Instant.now())) {
+            throw new IllegalArgumentException("Refresh token is revoked or expired");
+        }
         return issueTokens(user);
     }
 

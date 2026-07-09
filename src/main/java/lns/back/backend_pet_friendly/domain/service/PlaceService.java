@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -16,6 +17,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class PlaceService implements PlaceUseCase {
 
     private final PlaceRepository placeRepository;
@@ -33,6 +35,7 @@ public class PlaceService implements PlaceUseCase {
     }
 
     @Override
+    @Transactional
     public Place create(CreatePlaceCommand cmd) {
         Place place = Place.builder().id(UUID.randomUUID()).ownerId(cmd.ownerId()).build();
         applyCommand(place, cmd);
@@ -40,6 +43,7 @@ public class PlaceService implements PlaceUseCase {
     }
 
     @Override
+    @Transactional
     public Place update(UUID id, CreatePlaceCommand cmd, UUID requesterId, boolean isAdmin) {
         Place place = getById(id);
         requireOwnerOrAdmin(place, requesterId, isAdmin);
@@ -67,6 +71,7 @@ public class PlaceService implements PlaceUseCase {
     }
 
     @Override
+    @Transactional
     public void delete(UUID id, UUID requesterId, boolean isAdmin) {
         Place place = getById(id);
         requireOwnerOrAdmin(place, requesterId, isAdmin);
@@ -74,6 +79,7 @@ public class PlaceService implements PlaceUseCase {
     }
 
     @Override
+    @Transactional
     public int deleteAll(List<UUID> ids) {
         int deleted = 0;
         for (UUID id : ids) {
@@ -86,6 +92,7 @@ public class PlaceService implements PlaceUseCase {
     }
 
     @Override
+    @Transactional
     public String uploadImage(UUID id, byte[] data, String filename, String contentType, UUID requesterId, boolean isAdmin) {
         Place place = getById(id);
         requireOwnerOrAdmin(place, requesterId, isAdmin);

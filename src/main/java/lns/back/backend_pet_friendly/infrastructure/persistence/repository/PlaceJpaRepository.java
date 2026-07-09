@@ -26,11 +26,13 @@ public interface PlaceJpaRepository extends JpaRepository<PlaceJpaEntity, UUID> 
     /**
      * PostGIS-native geospatial search — only works against a PostgreSQL instance with the postgis extension.
      * Filters by radius (metres), optional type, optional text, ordered by distance ascending.
+     * Uses the pre-computed {@code location} column (generated STORED) so the GIST index backs ST_DWithin.
      */
     @Query(value = """
             SELECT * FROM places p
-            WHERE ST_DWithin(
-                ST_SetSRID(ST_MakePoint(p.longitude, p.latitude), 4326)::geography,
+            WHERE p.location IS NOT NULL
+              AND ST_DWithin(
+                p.location,
                 ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography,
                 :radiusMeters
             )
@@ -41,14 +43,15 @@ public interface PlaceJpaRepository extends JpaRepository<PlaceJpaEntity, UUID> 
               AND (CAST(:filterAnimals AS boolean) = FALSE
                    OR EXISTS (SELECT 1 FROM place_animals pa WHERE pa.place_id = p.id AND pa.animal IN (:animals)))
             ORDER BY ST_Distance(
-                ST_SetSRID(ST_MakePoint(p.longitude, p.latitude), 4326)::geography,
+                p.location,
                 ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography
             ) ASC
             """,
             countQuery = """
             SELECT COUNT(*) FROM places p
-            WHERE ST_DWithin(
-                ST_SetSRID(ST_MakePoint(p.longitude, p.latitude), 4326)::geography,
+            WHERE p.location IS NOT NULL
+              AND ST_DWithin(
+                p.location,
                 ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography,
                 :radiusMeters
             )

@@ -12,11 +12,13 @@ import lns.back.backend_pet_friendly.domain.port.out.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class UserService implements UserUseCase {
 
     private final UserRepository userRepository;
@@ -33,6 +35,7 @@ public class UserService implements UserUseCase {
     }
 
     @Override
+    @Transactional
     public User updateProfile(UUID id, UpdateProfileCommand cmd) {
         User user = getById(id);
         if (cmd.name() != null)  user.setName(cmd.name());
@@ -49,6 +52,7 @@ public class UserService implements UserUseCase {
     }
 
     @Override
+    @Transactional
     public String uploadAvatar(UUID id, byte[] data, String filename, String contentType) {
         User user = getById(id);
         String url = fileStoragePort.upload(data, filename, contentType);
@@ -65,6 +69,7 @@ public class UserService implements UserUseCase {
     }
 
     @Override
+    @Transactional
     public User adminUpdate(UUID id, AdminUpdateCommand cmd) {
         User user = getById(id);
         if (cmd.name() != null)    user.setName(cmd.name());
@@ -79,6 +84,7 @@ public class UserService implements UserUseCase {
     }
 
     @Override
+    @Transactional
     public void delete(UUID id) {
         getById(id); // 404 si absent
         userRepository.deleteById(id);

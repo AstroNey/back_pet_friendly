@@ -6,12 +6,14 @@ import lns.back.backend_pet_friendly.domain.port.out.FavoriteRepository;
 import lns.back.backend_pet_friendly.domain.port.out.PlaceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class FavoriteService implements FavoriteUseCase {
 
     private final FavoriteRepository favoriteRepository;
@@ -23,6 +25,7 @@ public class FavoriteService implements FavoriteUseCase {
     }
 
     @Override
+    @Transactional
     public void toggle(UUID userId, UUID placeId) {
         placeRepository.findById(placeId)
                 .orElseThrow(() -> new IllegalArgumentException("Place not found: " + placeId));
@@ -34,6 +37,7 @@ public class FavoriteService implements FavoriteUseCase {
     }
 
     @Override
+    @Transactional
     public void remove(UUID userId, UUID placeId) {
         if (favoriteRepository.exists(userId, placeId)) {
             favoriteRepository.remove(userId, placeId);

@@ -115,25 +115,20 @@ class AuthServiceTest {
     }
 
     @Test
-    void refresh_validActiveToken_rotatesAndIssuesNewPair() {
-        RefreshToken stored = RefreshToken.builder()
-                .id(UUID.randomUUID())
-                .userId(savedUser.getId())
-                .tokenHash(TokenHasher.sha256("refresh-token"))
-                .expiresAt(Instant.now().plus(1, ChronoUnit.DAYS))
-                .createdAt(Instant.now())
-                .build();
+    void refresh_validActiveToken_rotatesAtomicallyAndIssuesNewPair() {
         when(tokenPort.isValid("refresh-token")).thenReturn(true);
-        when(refreshTokenRepository.findByTokenHash(TokenHasher.sha256("refresh-token")))
-                .thenReturn(Optional.of(stored));
         when(tokenPort.extractUserId("refresh-token")).thenReturn(savedUser.getId());
         when(userRepository.findById(savedUser.getId())).thenReturn(Optional.of(savedUser));
+        when(refreshTokenRepository.revokeIfActive(eq(TokenHasher.sha256("refresh-token")), any()))
+                .thenReturn(true);
 
         AuthResult result = authService.refresh("refresh-token");
 
         assertThat(result.accessToken()).isEqualTo("access-token");
-        assertThat(stored.getRevokedAt()).isNotNull();
-        verify(refreshTokenRepository, times(2)).save(any(RefreshToken.class));
+        assertThat(result.refreshToken()).isEqualTo("refresh-token");
+        verify(refreshTokenRepository).revokeIfActive(eq(TokenHasher.sha256("refresh-token")), any());
+        // Une seule persistance : le NOUVEAU refresh token (l'ancien est révoqué par UPDATE atomique).
+        verify(refreshTokenRepository, times(1)).save(any(RefreshToken.class));
     }
 
     @Test
@@ -143,49 +138,48 @@ class AuthServiceTest {
         assertThatThrownBy(() -> authService.refresh("bad-token"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Invalid refresh token");
+        verify(refreshTokenRepository, never()).revokeIfActive(any(), any());
         verify(refreshTokenRepository, never()).save(any());
     }
 
     @Test
-    void refresh_tokenNotInDb_throws() {
+    void refresh_userNotFound_throws() {
         when(tokenPort.isValid("refresh-token")).thenReturn(true);
-        when(refreshTokenRepository.findByTokenHash(any())).thenReturn(Optional.empty());
+        when(tokenPort.extractUserId("refresh-token")).thenReturn(savedUser.getId());
+        when(userRepository.findById(savedUser.getId())).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> authService.refresh("refresh-token"))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("not found");
+                .hasMessageContaining("User not found");
+        verify(refreshTokenRepository, never()).revokeIfActive(any(), any());
     }
 
     @Test
-    void refresh_tokenAlreadyRevoked_throws() {
-        RefreshToken revoked = RefreshToken.builder()
-                .id(UUID.randomUUID())
-                .userId(savedUser.getId())
-                .tokenHash(TokenHasher.sha256("refresh-token"))
-                .expiresAt(Instant.now().plus(1, ChronoUnit.DAYS))
-                .revokedAt(Instant.now().minusSeconds(60))
-                .build();
+    void refresh_disabledAccount_throws() {
+        savedUser.setEnabled(false);
         when(tokenPort.isValid("refresh-token")).thenReturn(true);
-        when(refreshTokenRepository.findByTokenHash(any())).thenReturn(Optional.of(revoked));
+        when(tokenPort.extractUserId("refresh-token")).thenReturn(savedUser.getId());
+        when(userRepository.findById(savedUser.getId())).thenReturn(Optional.of(savedUser));
 
         assertThatThrownBy(() -> authService.refresh("refresh-token"))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("revoked");
+                .hasMessageContaining("disabled");
+        verify(refreshTokenRepository, never()).revokeIfActive(any(), any());
+        verify(refreshTokenRepository, never()).save(any());
     }
 
     @Test
-    void refresh_tokenExpired_throws() {
-        RefreshToken expired = RefreshToken.builder()
-                .id(UUID.randomUUID())
-                .userId(savedUser.getId())
-                .tokenHash(TokenHasher.sha256("refresh-token"))
-                .expiresAt(Instant.now().minus(1, ChronoUnit.DAYS))
-                .build();
+    void refresh_alreadyRotatedOrExpiredToken_throws() {
+        // revokeIfActive renvoie false : token déjà révoqué (rejoué/race) ou expiré.
         when(tokenPort.isValid("refresh-token")).thenReturn(true);
-        when(refreshTokenRepository.findByTokenHash(any())).thenReturn(Optional.of(expired));
+        when(tokenPort.extractUserId("refresh-token")).thenReturn(savedUser.getId());
+        when(userRepository.findById(savedUser.getId())).thenReturn(Optional.of(savedUser));
+        when(refreshTokenRepository.revokeIfActive(any(), any())).thenReturn(false);
 
         assertThatThrownBy(() -> authService.refresh("refresh-token"))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("revoked or expired");
+        verify(refreshTokenRepository, never()).save(any());
     }
 
     @Test

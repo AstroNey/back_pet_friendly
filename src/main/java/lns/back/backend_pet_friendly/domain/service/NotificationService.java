@@ -7,6 +7,7 @@ import lns.back.backend_pet_friendly.domain.port.out.NotificationSenderPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.HashMap;
@@ -16,6 +17,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class NotificationService implements NotificationUseCase {
 
     private final NotificationRepository notificationRepository;
@@ -27,6 +29,7 @@ public class NotificationService implements NotificationUseCase {
     }
 
     @Override
+    @Transactional
     public Notification create(CreateNotificationCommand cmd) {
         Notification saved = notificationRepository.save(Notification.builder()
                 .id(UUID.randomUUID())
@@ -55,6 +58,7 @@ public class NotificationService implements NotificationUseCase {
     }
 
     @Override
+    @Transactional
     public void markAsRead(UUID notificationId, UUID userId) {
         Notification n = find(notificationId, userId);
         n.setRead(true);
@@ -62,12 +66,14 @@ public class NotificationService implements NotificationUseCase {
     }
 
     @Override
+    @Transactional
     public void delete(UUID notificationId, UUID userId) {
         find(notificationId, userId);
         notificationRepository.delete(notificationId);
     }
 
     @Override
+    @Transactional
     public void clearAll(UUID userId) {
         notificationRepository.deleteAllByUserId(userId);
     }
