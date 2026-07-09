@@ -17,6 +17,7 @@ import lns.back.backend_pet_friendly.web.dto.response.PlaceResponse;
 
 
 import lns.back.backend_pet_friendly.web.dto.response.UploadResponse;
+import lns.back.backend_pet_friendly.web.support.ImageUploadValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -126,7 +127,7 @@ public class PlaceController {
     public ResponseEntity<UploadResponse> uploadPhoto(@PathVariable UUID id,
             @Parameter(description = "Image file (jpg/png/webp)") @RequestParam("file") MultipartFile file,
             @AuthenticationPrincipal UserDetails user) throws IOException {
-        if (file.isEmpty()) throw new IllegalArgumentException("file is empty");
+        ImageUploadValidator.validate(file);
         String url = placeUseCase.uploadImage(id, file.getBytes(), file.getOriginalFilename(), file.getContentType(),
             UUID.fromString(user.getUsername()), isAdmin(user));
         return ResponseEntity.ok(new UploadResponse(url));

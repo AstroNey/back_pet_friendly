@@ -1,6 +1,7 @@
 package lns.back.backend_pet_friendly.domain.service;
 
 import lns.back.backend_pet_friendly.domain.exception.DuplicateReviewException;
+import lns.back.backend_pet_friendly.domain.exception.ResourceNotFoundException;
 import lns.back.backend_pet_friendly.domain.model.Coordinates;
 import lns.back.backend_pet_friendly.domain.model.Place;
 import lns.back.backend_pet_friendly.domain.model.PlaceType;
@@ -121,7 +122,7 @@ class ReviewServiceTest {
 
         assertThatThrownBy(() -> reviewService.create(placeId,
                 new CreateReviewCommand(author.getId(), 4.0, "ok")))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Place not found");
     }
 
@@ -151,7 +152,7 @@ class ReviewServiceTest {
         UUID id = UUID.randomUUID();
         when(reviewRepository.findById(id)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> reviewService.delete(id, author.getId()))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test
@@ -189,7 +190,7 @@ class ReviewServiceTest {
         UUID id = UUID.randomUUID();
         when(reviewRepository.findById(id)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> reviewService.moderate(id, UUID.randomUUID(), ReviewStatus.APPROVED))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Review not found");
     }
 }

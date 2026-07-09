@@ -78,8 +78,8 @@ class AdminPlaceControllerIT {
                 .andExpect(jsonPath("$.deleted").value(2));
 
         // Effectivement supprimés.
-        mockMvc.perform(get("/api/v1/places/" + id1)).andExpect(status().isBadRequest());
-        mockMvc.perform(get("/api/v1/places/" + id2)).andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/v1/places/" + id1)).andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/v1/places/" + id2)).andExpect(status().isNotFound());
     }
 
     @Test

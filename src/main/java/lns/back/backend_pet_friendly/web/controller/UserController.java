@@ -9,6 +9,7 @@ import lns.back.backend_pet_friendly.domain.port.in.UserUseCase;
 import lns.back.backend_pet_friendly.web.dto.request.UpdateProfileRequest;
 import lns.back.backend_pet_friendly.web.dto.response.UploadResponse;
 import lns.back.backend_pet_friendly.web.dto.response.UserResponse;
+import lns.back.backend_pet_friendly.web.support.ImageUploadValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -64,7 +65,7 @@ public class UserController {
     public ResponseEntity<UploadResponse> uploadAvatar(
             @Parameter(description = "Image file (jpg/png/webp)") @RequestParam("file") MultipartFile file,
             @AuthenticationPrincipal UserDetails user) throws IOException {
-        if (file.isEmpty()) throw new IllegalArgumentException("file is empty");
+        ImageUploadValidator.validate(file);
         UUID id = UUID.fromString(user.getUsername());
         String url = userUseCase.uploadAvatar(id, file.getBytes(), file.getOriginalFilename(), file.getContentType());
         return ResponseEntity.ok(new UploadResponse(url));

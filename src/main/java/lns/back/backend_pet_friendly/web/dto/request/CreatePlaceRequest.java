@@ -8,12 +8,14 @@ import java.util.Map;
 
 @Schema(description = "Payload to create or update a place")
 public record CreatePlaceRequest(
-        @Schema(example = "Café des Toutous") @NotBlank String name,
+        @Schema(example = "Café des Toutous") @NotBlank @Size(max = 255) String name,
         @Schema(example = "CAFE") @NotNull PlaceType type,
-        @Schema(example = "12 rue de Rivoli, 75004 Paris") @NotBlank String address,
-        @Schema(example = "48.8566", description = "Latitude (decimal degrees, WGS84)") @NotNull Double latitude,
-        @Schema(example = "2.3522", description = "Longitude (decimal degrees, WGS84)") @NotNull Double longitude,
-        @Schema(example = "[\"DOG\", \"CAT\"]") List<AnimalType> animals,
-        @Schema(example = "Welcoming café with water bowls and a quiet terrace.") String description,
+        @Schema(example = "12 rue de Rivoli, 75004 Paris") @NotBlank @Size(max = 500) String address,
+        @Schema(example = "48.8566", description = "Latitude (decimal degrees, WGS84)")
+        @NotNull @DecimalMin("-90.0") @DecimalMax("90.0") Double latitude,
+        @Schema(example = "2.3522", description = "Longitude (decimal degrees, WGS84)")
+        @NotNull @DecimalMin("-180.0") @DecimalMax("180.0") Double longitude,
+        @Schema(example = "[\"DOG\", \"CAT\"]") @Size(max = 10) List<AnimalType> animals,
+        @Schema(example = "Welcoming café with water bowls and a quiet terrace.") @Size(max = 5000) String description,
         @Schema(description = "Opening hours per day (FR keys)",
-                example = "{\"lundi\":\"09h-19h\",\"mardi\":\"09h-19h\"}") Map<String,String> hours) {}
+                example = "{\"lundi\":\"09h-19h\",\"mardi\":\"09h-19h\"}") @Size(max = 7) Map<String,String> hours) {}

@@ -1,5 +1,6 @@
 package lns.back.backend_pet_friendly.domain.service;
 
+import lns.back.backend_pet_friendly.domain.exception.ResourceNotFoundException;
 import lns.back.backend_pet_friendly.domain.model.Place;
 import lns.back.backend_pet_friendly.domain.port.in.FavoriteUseCase;
 import lns.back.backend_pet_friendly.domain.port.out.FavoriteRepository;
@@ -28,7 +29,7 @@ public class FavoriteService implements FavoriteUseCase {
     @Transactional
     public void toggle(UUID userId, UUID placeId) {
         placeRepository.findById(placeId)
-                .orElseThrow(() -> new IllegalArgumentException("Place not found: " + placeId));
+                .orElseThrow(() -> new ResourceNotFoundException("Place not found: " + placeId));
         if (favoriteRepository.exists(userId, placeId)) {
             favoriteRepository.remove(userId, placeId);
         } else {

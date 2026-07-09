@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.Validator;
 import lns.back.backend_pet_friendly.domain.model.Coordinates;
 import lns.back.backend_pet_friendly.domain.port.in.PlaceImportUseCase;
 import lns.back.backend_pet_friendly.domain.port.in.PlaceUseCase;
@@ -17,6 +18,7 @@ import lns.back.backend_pet_friendly.web.dto.request.ImportPlaceItem;
 import lns.back.backend_pet_friendly.web.dto.response.BulkDeleteResponse;
 import lns.back.backend_pet_friendly.web.dto.response.ImportJobResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -29,6 +31,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Tag(name = "Admin - Places", description = "Gestion des lieux en lot (réservé au rôle ADMIN)")
 @RestController
 @RequestMapping("/api/v1/admin/places")
@@ -36,9 +39,13 @@ import java.util.UUID;
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminPlaceController {
 
+    /** Plafond documenté (Swagger) : au-delà, l'import est refusé (borne mémoire/DoS). */
+    private static final int MAX_IMPORT_ITEMS = 10_000;
+
     private final PlaceUseCase placeUseCase;
     private final PlaceImportUseCase placeImportUseCase;
     private final ObjectMapper objectMapper;
+    private final Validator validator;
 
     @Operation(summary = "Supprimer des lieux en lot",
         description = "Supprime tous les lieux dont l'id figure dans la liste. Les ids inexistants sont ignorés. ADMIN uniquement.")
@@ -85,11 +92,26 @@ public class AdminPlaceController {
             items = objectMapper.readValue(file.getBytes(),
                     objectMapper.getTypeFactory().constructCollectionType(List.class, ImportPlaceItem.class));
         } catch (Exception e) {
-            throw new IllegalArgumentException("Fichier JSON invalide : " + e.getMessage());
+            // Détail Jackson (structure/classe interne) loggé côté serveur, pas renvoyé au client.
+            log.warn("Import JSON parse failure", e);
+            throw new IllegalArgumentException("Fichier JSON invalide ou malformé");
         }
 
         if (items.isEmpty()) {
             return ResponseEntity.badRequest().build();
+        }
+        if (items.size() > MAX_IMPORT_ITEMS) {
+            throw new IllegalArgumentException("Trop de lieux à importer (max " + MAX_IMPORT_ITEMS + ")");
+        }
+        // La désérialisation Jackson ne déclenche pas la Bean Validation : on valide chaque item explicitement.
+        for (int i = 0; i < items.size(); i++) {
+            var violations = validator.validate(items.get(i));
+            if (!violations.isEmpty()) {
+                String detail = violations.stream()
+                        .map(v -> v.getPropertyPath() + " " + v.getMessage())
+                        .findFirst().orElse("invalide");
+                throw new IllegalArgumentException("Lieu #" + (i + 1) + " invalide : " + detail);
+            }
         }
 
         UUID requesterId = UUID.fromString(principal.getUsername());

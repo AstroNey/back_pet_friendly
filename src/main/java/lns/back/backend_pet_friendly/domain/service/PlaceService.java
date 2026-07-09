@@ -1,5 +1,6 @@
 package lns.back.backend_pet_friendly.domain.service;
 
+import lns.back.backend_pet_friendly.domain.exception.ResourceNotFoundException;
 import lns.back.backend_pet_friendly.domain.model.Place;
 import lns.back.backend_pet_friendly.domain.port.in.PlaceUseCase;
 import lns.back.backend_pet_friendly.domain.port.out.FileStoragePort;
@@ -31,7 +32,7 @@ public class PlaceService implements PlaceUseCase {
     @Override
     public Place getById(UUID id) {
         return placeRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Place not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Place not found: " + id));
     }
 
     @Override

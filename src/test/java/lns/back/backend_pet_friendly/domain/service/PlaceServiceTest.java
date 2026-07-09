@@ -1,5 +1,6 @@
 package lns.back.backend_pet_friendly.domain.service;
 
+import lns.back.backend_pet_friendly.domain.exception.ResourceNotFoundException;
 import lns.back.backend_pet_friendly.domain.model.Coordinates;
 import lns.back.backend_pet_friendly.domain.model.Place;
 import lns.back.backend_pet_friendly.domain.model.PlaceType;
@@ -59,7 +60,7 @@ class PlaceServiceTest {
         UUID id = UUID.randomUUID();
         when(placeRepository.findById(id)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> placeService.getById(id))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Place not found");
     }
 
@@ -145,7 +146,7 @@ class PlaceServiceTest {
     void delete_notFound_throws() {
         UUID id = UUID.randomUUID();
         when(placeRepository.findById(id)).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> placeService.delete(id, ownerId, false)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> placeService.delete(id, ownerId, false)).isInstanceOf(ResourceNotFoundException.class);
         verify(placeRepository, never()).delete(any());
     }
 

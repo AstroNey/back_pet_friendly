@@ -109,7 +109,9 @@ class AuthControllerIT {
                 .andReturn();
         String refresh = objectMapper.readTree(reg.getResponse().getContentAsString()).get("refreshToken").asText();
 
-        MvcResult res = mockMvc.perform(post("/api/v1/auth/refresh").param("refreshToken", refresh))
+        MvcResult res = mockMvc.perform(post("/api/v1/auth/refresh")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of("refreshToken", refresh))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token", not(emptyString())))
                 .andExpect(jsonPath("$.refreshToken", not(emptyString())))
@@ -117,13 +119,17 @@ class AuthControllerIT {
         String rotated = objectMapper.readTree(res.getResponse().getContentAsString()).get("refreshToken").asText();
         assertThat(rotated).isNotEqualTo(refresh);
 
-        mockMvc.perform(post("/api/v1/auth/refresh").param("refreshToken", refresh))
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of("refreshToken", refresh))))
                 .andExpect(status().is4xxClientError());
     }
 
     @Test
     void refresh_invalidToken_returns4xx() throws Exception {
-        mockMvc.perform(post("/api/v1/auth/refresh").param("refreshToken", "definitely-not-a-jwt"))
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of("refreshToken", "definitely-not-a-jwt"))))
                 .andExpect(status().is4xxClientError());
     }
 
@@ -137,16 +143,22 @@ class AuthControllerIT {
                 .andReturn();
         String refresh = objectMapper.readTree(reg.getResponse().getContentAsString()).get("refreshToken").asText();
 
-        mockMvc.perform(post("/api/v1/auth/logout").param("refreshToken", refresh))
+        mockMvc.perform(post("/api/v1/auth/logout")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of("refreshToken", refresh))))
                 .andExpect(status().isNoContent());
 
-        mockMvc.perform(post("/api/v1/auth/refresh").param("refreshToken", refresh))
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of("refreshToken", refresh))))
                 .andExpect(status().is4xxClientError());
     }
 
     @Test
     void logout_unknownToken_stillReturnsNoContent() throws Exception {
-        mockMvc.perform(post("/api/v1/auth/logout").param("refreshToken", "unknown-token"))
+        mockMvc.perform(post("/api/v1/auth/logout")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of("refreshToken", "unknown-token"))))
                 .andExpect(status().isNoContent());
     }
 }

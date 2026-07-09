@@ -32,6 +32,11 @@ build/
 ### VS Code ###
 .vscode/
 
+### Secrets / env ###
+.env
+.env.*
+!.env.prod.example
+
 ### Local file storage (dev) ###
 var/storage/
 

@@ -23,3 +23,6 @@ sentry:
 petfriendly:
   storage:
     type: local
+  rate-limit:
+    auth:
+      max-requests: 0   # désactivé en dev (tests)

@@ -17,3 +17,10 @@ petfriendly:
   jwt:
     # Aucune valeur par défaut en prod : démarrage impossible si JWT_SECRET est absent (pas de fallback dev public).
     secret: ${JWT_SECRET}
+
+# La doc API expose toute la surface d'attaque : désactivée par défaut en prod (activable via env si besoin interne).
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:false}
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:false}

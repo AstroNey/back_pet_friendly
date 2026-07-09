@@ -29,6 +29,18 @@ public class AuthService implements AuthUseCase {
     private final PasswordEncoder passwordEncoder;
     private final TokenPort tokenPort;
 
+    /** Hash BCrypt factice pour égaliser le temps de réponse quand l'email est inconnu (anti-énumération). */
+    private volatile String dummyHash;
+
+    private String dummyHash() {
+        String h = dummyHash;
+        if (h == null) {
+            h = passwordEncoder.encode("timing-equalizer-not-a-real-password");
+            dummyHash = h;
+        }
+        return h;
+    }
+
     @Override
     public AuthResult register(RegisterCommand cmd) {
         if (userRepository.existsByEmail(cmd.email())) {
@@ -47,8 +59,12 @@ public class AuthService implements AuthUseCase {
 
     @Override
     public AuthResult login(String email, String password) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid credentials"));
+        User user = userRepository.findByEmail(email).orElse(null);
+        if (user == null) {
+            // Exécute un matches() factice pour ne pas révéler l'absence du compte via le temps de réponse.
+            passwordEncoder.matches(password, dummyHash());
+            throw new IllegalArgumentException("Invalid credentials");
+        }
         if (!passwordEncoder.matches(password, user.getPasswordHash())) {
             throw new IllegalArgumentException("Invalid credentials");
         }

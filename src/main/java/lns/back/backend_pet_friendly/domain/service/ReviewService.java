@@ -1,6 +1,7 @@
 package lns.back.backend_pet_friendly.domain.service;
 
 import lns.back.backend_pet_friendly.domain.exception.DuplicateReviewException;
+import lns.back.backend_pet_friendly.domain.exception.ResourceNotFoundException;
 import lns.back.backend_pet_friendly.domain.model.Place;
 import lns.back.backend_pet_friendly.domain.model.Review;
 import lns.back.backend_pet_friendly.domain.model.ReviewStatus;
@@ -44,12 +45,12 @@ public class ReviewService implements ReviewUseCase {
     @Transactional
     public Review create(UUID placeId, CreateReviewCommand cmd) {
         placeRepository.findById(placeId)
-                .orElseThrow(() -> new IllegalArgumentException("Place not found: " + placeId));
+                .orElseThrow(() -> new ResourceNotFoundException("Place not found: " + placeId));
         if (reviewRepository.existsByPlaceIdAndAuthorId(placeId, cmd.authorId())) {
             throw new DuplicateReviewException("You already reviewed this place");
         }
         User author = userRepository.findById(cmd.authorId())
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         Review review = Review.builder()
                 .id(UUID.randomUUID())
@@ -72,7 +73,7 @@ public class ReviewService implements ReviewUseCase {
     @Transactional
     public Review update(UUID reviewId, UUID requesterId, UpdateReviewCommand cmd) {
         Review review = reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new IllegalArgumentException("Review not found: " + reviewId));
+                .orElseThrow(() -> new ResourceNotFoundException("Review not found: " + reviewId));
         if (!review.getAuthorId().equals(requesterId)) {
             throw new AccessDeniedException("Not your review");
         }
@@ -91,7 +92,7 @@ public class ReviewService implements ReviewUseCase {
     @Transactional
     public void delete(UUID reviewId, UUID requesterId) {
         Review review = reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new IllegalArgumentException("Review not found: " + reviewId));
+                .orElseThrow(() -> new ResourceNotFoundException("Review not found: " + reviewId));
         if (!review.getAuthorId().equals(requesterId)) {
             throw new AccessDeniedException("Not your review");
         }
@@ -114,7 +115,7 @@ public class ReviewService implements ReviewUseCase {
             throw new IllegalArgumentException("Moderation status must be APPROVED or REJECTED");
         }
         Review review = reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new IllegalArgumentException("Review not found: " + reviewId));
+                .orElseThrow(() -> new ResourceNotFoundException("Review not found: " + reviewId));
         review.setStatus(newStatus);
         review.setModeratedAt(Instant.now());
         review.setModeratedBy(adminId);

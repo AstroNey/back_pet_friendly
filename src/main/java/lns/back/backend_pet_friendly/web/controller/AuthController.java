@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lns.back.backend_pet_friendly.domain.port.in.AuthUseCase;
 import lns.back.backend_pet_friendly.web.dto.request.LoginRequest;
+import lns.back.backend_pet_friendly.web.dto.request.RefreshTokenRequest;
 import lns.back.backend_pet_friendly.web.dto.request.RegisterRequest;
 import lns.back.backend_pet_friendly.web.dto.response.AuthResponse;
 import lns.back.backend_pet_friendly.web.dto.response.UserResponse;
@@ -34,14 +35,14 @@ public class AuthController {
 
     @Operation(summary = "Refresh JWT", description = "Exchanges a valid refresh token for a new access token. The old refresh token is revoked (rotation).")
     @PostMapping("/refresh")
-    public ResponseEntity<AuthResponse> refresh(@RequestParam String refreshToken) {
-        return ResponseEntity.ok(toResponse(authUseCase.refresh(refreshToken)));
+    public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody RefreshTokenRequest req) {
+        return ResponseEntity.ok(toResponse(authUseCase.refresh(req.refreshToken())));
     }
 
     @Operation(summary = "Logout", description = "Revokes the provided refresh token so it cannot be re-used.")
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@RequestParam String refreshToken) {
-        authUseCase.logout(refreshToken);
+    public ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequest req) {
+        authUseCase.logout(req.refreshToken());
         return ResponseEntity.noContent().build();
     }
 

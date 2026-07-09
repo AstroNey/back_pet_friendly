@@ -1,5 +1,6 @@
 package lns.back.backend_pet_friendly.domain.service;
 
+import lns.back.backend_pet_friendly.domain.exception.ResourceNotFoundException;
 import lns.back.backend_pet_friendly.domain.model.Notification;
 import lns.back.backend_pet_friendly.domain.model.NotificationType;
 import lns.back.backend_pet_friendly.domain.port.out.NotificationRepository;
@@ -89,6 +90,6 @@ class NotificationServiceTest {
         UUID id = UUID.randomUUID();
         when(notificationRepository.findById(id)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> notificationService.markAsRead(id, userId))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 }

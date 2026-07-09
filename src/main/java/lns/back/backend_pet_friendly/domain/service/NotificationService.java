@@ -1,5 +1,6 @@
 package lns.back.backend_pet_friendly.domain.service;
 
+import lns.back.backend_pet_friendly.domain.exception.ResourceNotFoundException;
 import lns.back.backend_pet_friendly.domain.model.Notification;
 import lns.back.backend_pet_friendly.domain.port.in.NotificationUseCase;
 import lns.back.backend_pet_friendly.domain.port.out.NotificationRepository;
@@ -80,7 +81,7 @@ public class NotificationService implements NotificationUseCase {
 
     private Notification find(UUID id, UUID userId) {
         Notification n = notificationRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Notification not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Notification not found: " + id));
         if (!n.getUserId().equals(userId)) throw new AccessDeniedException("Not your notification");
         return n;
     }

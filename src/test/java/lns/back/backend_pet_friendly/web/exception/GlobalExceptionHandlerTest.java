@@ -53,7 +53,7 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void generic_maps500() {
-        ResponseEntity<?> res = handler.handleGeneric(req("/boom"));
+        ResponseEntity<?> res = handler.handleGeneric(new RuntimeException("boom"), req("/boom"));
         assertThat(res.getStatusCode().value()).isEqualTo(500);
         assertThat(((GlobalExceptionHandler.ErrorResponse) res.getBody()).error()).isEqualTo("Internal server error");
     }

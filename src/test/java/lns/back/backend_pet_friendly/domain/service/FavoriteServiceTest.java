@@ -1,5 +1,6 @@
 package lns.back.backend_pet_friendly.domain.service;
 
+import lns.back.backend_pet_friendly.domain.exception.ResourceNotFoundException;
 import lns.back.backend_pet_friendly.domain.model.Coordinates;
 import lns.back.backend_pet_friendly.domain.model.Place;
 import lns.back.backend_pet_friendly.domain.model.PlaceType;
@@ -63,7 +64,7 @@ class FavoriteServiceTest {
         when(placeRepository.findById(placeId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> favoriteService.toggle(userId, placeId))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Place not found");
     }
 
