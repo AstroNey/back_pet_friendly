@@ -28,7 +28,20 @@
       "Bash(JAVA_HOME=/c/Users/nicol/.jdks/ms-21.0.10 ./mvnw clean compile -q)",
       "Bash(JAVA_HOME=/c/Users/nicol/.jdks/ms-21.0.10 ./mvnw test -Dtest=\"PlaceServiceTest,ReviewServiceTest,UserServiceTest,ArchitectureTest\" -q)",
       "Bash(JAVA_HOME=/c/Users/nicol/.jdks/ms-21.0.10 ./mvnw test -Dtest=\"PlaceServiceTest,ReviewServiceTest,UserServiceTest,ArchitectureTest\")",
-      "Bash(JAVA_HOME=/c/Users/nicol/.jdks/ms-21.0.10 ./mvnw test -Dtest=\"PlaceServiceTest,ArchitectureTest\")"
+      "Bash(JAVA_HOME=/c/Users/nicol/.jdks/ms-21.0.10 ./mvnw test -Dtest=\"PlaceServiceTest,ArchitectureTest\")",
+      "Bash(ssh-keygen -t ed25519 -C \"github-actions-deploy\" -f deploy_key -N \"\" -q)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(gh --version)",
+      "Bash(gh workflow *)",
+      "Bash(gh auth *)",
+      "Bash(ssh-keygen -y -f deploy_key)",
+      "Bash(base64 -w0 deploy_key)",
+      "Bash(openssl rand *)",
+      "Bash(echo \"JWT_SECRET=$\\(openssl rand -base64 48\\)\")",
+      "Bash(echo \"POSTGRES_PASSWORD=$\\(openssl rand -base64 24\\)\")",
+      "Bash(echo \"MINIO_ROOT_PASSWORD=$\\(openssl rand -base64 18\\)\")"
     ]
   }
 }
