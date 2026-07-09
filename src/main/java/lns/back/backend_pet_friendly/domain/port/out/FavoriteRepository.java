@@ -7,6 +7,7 @@ import java.util.UUID;
 
 public interface FavoriteRepository {
     List<Place> findPlacesByUserId(UUID userId);
+    long countByUserId(UUID userId);
     void add(UUID userId, UUID placeId);
     void remove(UUID userId, UUID placeId);
     boolean exists(UUID userId, UUID placeId);

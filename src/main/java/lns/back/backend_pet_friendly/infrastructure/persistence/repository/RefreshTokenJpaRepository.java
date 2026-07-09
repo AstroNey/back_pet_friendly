@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
@@ -25,4 +26,10 @@ public interface RefreshTokenJpaRepository extends JpaRepository<RefreshTokenJpa
     @Transactional
     @Query("UPDATE RefreshTokenJpaEntity t SET t.revokedAt = :now WHERE t.tokenHash = :tokenHash AND t.revokedAt IS NULL AND t.expiresAt > :now")
     int revokeIfActive(@Param("tokenHash") String tokenHash, @Param("now") Instant now);
+
+    /** Révocation de toute la famille en transaction indépendante : persiste même si l'appelant rollback ensuite. */
+    @Modifying
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Query("UPDATE RefreshTokenJpaEntity t SET t.revokedAt = :now WHERE t.userId = :userId AND t.revokedAt IS NULL")
+    void revokeAllByUserIdNewTx(@Param("userId") UUID userId, @Param("now") Instant now);
 }

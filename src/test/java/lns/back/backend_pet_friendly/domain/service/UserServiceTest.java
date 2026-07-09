@@ -83,7 +83,7 @@ class UserServiceTest {
     void getStats_countsReviewsByAuthor_placesByOwner_andFavorites() {
         when(placeRepository.countByOwnerId(user.getId())).thenReturn(2L);
         when(reviewRepository.countByAuthorId(user.getId())).thenReturn(3L);
-        when(favoriteRepository.findPlacesByUserId(user.getId())).thenReturn(List.of());
+        when(favoriteRepository.countByUserId(user.getId())).thenReturn(0L);
 
         UserStats stats = userService.getStats(user.getId());
 

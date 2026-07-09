@@ -17,4 +17,11 @@ public interface RefreshTokenRepository {
      * de rotation concurrente (anti-replay/race), les autres reçoivent {@code false}.
      */
     boolean revokeIfActive(String tokenHash, Instant now);
+
+    /**
+     * Révoque toute la famille de tokens de l'utilisateur dans une transaction indépendante.
+     * Utilisé sur détection de rejeu (theft) : la révocation doit être persistée même si l'appelant
+     * lève ensuite une exception pour rejeter la requête.
+     */
+    void revokeFamilyOnReplay(UUID userId);
 }

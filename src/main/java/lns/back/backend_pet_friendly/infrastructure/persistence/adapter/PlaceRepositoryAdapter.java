@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -20,6 +21,7 @@ public class PlaceRepositoryAdapter implements PlaceRepository {
     private final PlaceMapper mapper;
 
     @Override public Optional<Place> findById(UUID id) { return jpa.findById(id).map(mapper::toDomain); }
+    @Override public List<Place> findAllByIds(Collection<UUID> ids) { return jpa.findAllById(ids).stream().map(mapper::toDomain).toList(); }
     @Override public Place save(Place place) { return mapper.toDomain(jpa.save(mapper.toEntity(place))); }
     @Override public void delete(UUID id) { jpa.deleteById(id); }
     @Override public Page<Place> findAll(Pageable pageable) { return jpa.findAll(pageable).map(mapper::toDomain); }

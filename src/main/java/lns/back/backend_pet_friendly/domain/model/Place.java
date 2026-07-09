@@ -42,17 +42,4 @@ public class Place {
 
     @Builder.Default
     private Instant updatedAt = Instant.now();
-
-    @Builder.Default
-    private List<Review> reviews = new ArrayList<>();
-
-    public void addReview(Review review) {
-        this.reviews.add(review);
-        recalculateRating();
-    }
-
-    private void recalculateRating() {
-        this.rating = reviews.stream().mapToDouble(Review::getRating).average().orElse(0.0);
-        this.reviewCount = reviews.size();
-    }
 }

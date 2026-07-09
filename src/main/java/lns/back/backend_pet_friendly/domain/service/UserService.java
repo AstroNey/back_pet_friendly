@@ -47,7 +47,7 @@ public class UserService implements UserUseCase {
     public UserStats getStats(UUID id) {
         int places    = (int) placeRepository.countByOwnerId(id);
         int reviews   = (int) reviewRepository.countByAuthorId(id);
-        int favorites = favoriteRepository.findPlacesByUserId(id).size();
+        int favorites = (int) favoriteRepository.countByUserId(id);
         return new UserStats(places, reviews, favorites);
     }
 

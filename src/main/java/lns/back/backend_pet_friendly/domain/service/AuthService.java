@@ -93,6 +93,11 @@ public class AuthService implements AuthUseCase {
         }
         String hash = TokenHasher.sha256(refreshToken);
         if (!refreshTokenRepository.revokeIfActive(hash, Instant.now())) {
+            // Token connu mais déjà révoqué = rejeu (vol probable) → révoquer toute la famille
+            // (transaction indépendante pour survivre au throw ci-dessous).
+            refreshTokenRepository.findByTokenHash(hash)
+                    .filter(RefreshToken::isRevoked)
+                    .ifPresent(t -> refreshTokenRepository.revokeFamilyOnReplay(userId));
             throw new IllegalArgumentException("Refresh token is revoked or expired");
         }
         return issueTokens(user);

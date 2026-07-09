@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.UUID;
 public interface FavoriteJpaRepository extends JpaRepository<FavoriteJpaEntity, FavoriteId> {
     boolean existsById_UserIdAndId_PlaceId(UUID userId, UUID placeId);
+    long countById_UserId(UUID userId);
     @Transactional
     void deleteById_UserIdAndId_PlaceId(UUID userId, UUID placeId);
 }

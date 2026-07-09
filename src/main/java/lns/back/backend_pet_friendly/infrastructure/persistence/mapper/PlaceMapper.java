@@ -12,6 +12,5 @@ public interface PlaceMapper {
     PlaceJpaEntity toEntity(Place place);
 
     @Mapping(target = "coordinates", expression = "java(new lns.back.backend_pet_friendly.domain.model.Coordinates(entity.getLatitude() != null ? entity.getLatitude() : 0.0, entity.getLongitude() != null ? entity.getLongitude() : 0.0))")
-    @Mapping(target = "reviews",     ignore = true)
     Place toDomain(PlaceJpaEntity entity);
 }

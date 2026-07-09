@@ -18,7 +18,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -104,7 +107,11 @@ public class ReviewService implements ReviewUseCase {
     public Page<Review> getByStatus(ReviewStatus status, int page, int size) {
         var pageable = Pagination.of(page, size, Sort.by("createdAt").descending());
         Page<Review> reviews = reviewRepository.findByStatus(status, pageable);
-        reviews.forEach(this::enrichPlaceName);
+        // Batch : un seul findAllByIds pour tous les placeId de la page (évite le N+1 de enrichPlaceName).
+        List<UUID> placeIds = reviews.stream().map(Review::getPlaceId).distinct().toList();
+        Map<UUID, String> names = placeRepository.findAllByIds(placeIds).stream()
+                .collect(Collectors.toMap(Place::getId, Place::getName));
+        reviews.forEach(r -> r.setPlaceName(names.get(r.getPlaceId())));
         return reviews;
     }
 

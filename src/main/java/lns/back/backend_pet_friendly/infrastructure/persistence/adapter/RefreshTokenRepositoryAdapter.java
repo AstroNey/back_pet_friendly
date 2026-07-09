@@ -37,4 +37,9 @@ public class RefreshTokenRepositoryAdapter implements RefreshTokenRepository {
     public boolean revokeIfActive(String tokenHash, Instant now) {
         return jpa.revokeIfActive(tokenHash, now) > 0;
     }
+
+    @Override
+    public void revokeFamilyOnReplay(UUID userId) {
+        jpa.revokeAllByUserIdNewTx(userId, Instant.now());
+    }
 }

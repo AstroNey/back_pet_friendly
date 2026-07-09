@@ -72,8 +72,10 @@ public class S3FileStorageAdapter implements FileStoragePort {
                     RequestBody.fromBytes(data));
             return publicUrl(key);
         } catch (SdkException e) {
-            log.warn("S3 upload failed ({}) — returning mock URL", e.getMessage());
-            return publicUrl(key);
+            // Le client S3 est configuré : un échec est une vraie erreur. Propager pour ne pas
+            // persister une URL pointant vers un objet inexistant (la transaction du service rollback).
+            log.error("S3 upload failed for {}", key, e);
+            throw new IllegalStateException("File upload failed", e);
         }
     }
 
