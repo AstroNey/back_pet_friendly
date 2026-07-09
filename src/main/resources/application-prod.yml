@@ -12,3 +12,8 @@ spring:
     show-sql: false
   flyway:
     enabled: true
+
+petfriendly:
+  jwt:
+    # Aucune valeur par défaut en prod : démarrage impossible si JWT_SECRET est absent (pas de fallback dev public).
+    secret: ${JWT_SECRET}

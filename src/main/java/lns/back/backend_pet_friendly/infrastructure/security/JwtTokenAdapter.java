@@ -1,6 +1,7 @@
 package lns.back.backend_pet_friendly.infrastructure.security;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import lns.back.backend_pet_friendly.domain.port.out.TokenPort;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -11,14 +12,24 @@ import java.util.UUID;
 
 @Component
 public class JwtTokenAdapter implements TokenPort {
+    /** Longueur minimale du secret HS256 : 256 bits = 32 octets. */
+    private static final int MIN_SECRET_BYTES = 32;
+
     @Value("${petfriendly.jwt.secret}") private String secret;
     @Value("${petfriendly.jwt.expiration-minutes:15}") private int accessMinutes;
     @Value("${petfriendly.jwt.refresh-expiration-days:7}") private int refreshDays;
 
+    @PostConstruct
+    void validateSecret() {
+        if (secret == null || secret.getBytes(StandardCharsets.UTF_8).length < MIN_SECRET_BYTES) {
+            throw new IllegalStateException("JWT secret must be at least " + MIN_SECRET_BYTES + " bytes (256 bits)");
+        }
+    }
+
     private SecretKey key() { return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8)); }
 
     @Override public String generateAccessToken(UUID userId, String email) {
-        return Jwts.builder().id(UUID.randomUUID().toString()).subject(userId.toString()).claim("email", email)
+        return Jwts.builder().id(UUID.randomUUID().toString()).subject(userId.toString()).claim("email", email).claim("type", "access")
                 .issuedAt(new Date()).expiration(new Date(System.currentTimeMillis() + (long)accessMinutes * 60_000))
                 .signWith(key()).compact();
     }
@@ -33,5 +44,11 @@ public class JwtTokenAdapter implements TokenPort {
     @Override public boolean isValid(String token) {
         try { Jwts.parser().verifyWith(key()).build().parseSignedClaims(token); return true; }
         catch (JwtException | IllegalArgumentException e) { return false; }
+    }
+    @Override public boolean isValidAccessToken(String token) {
+        try {
+            Claims claims = Jwts.parser().verifyWith(key()).build().parseSignedClaims(token).getPayload();
+            return "access".equals(claims.get("type", String.class));
+        } catch (JwtException | IllegalArgumentException e) { return false; }
     }
 }

@@ -74,6 +74,11 @@ public class AuthService implements AuthUseCase {
         UUID userId = tokenPort.extractUserId(refreshToken);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        if (!user.isEnabled()) {
+            // Compte banni : révoquer toute la famille et refuser le rafraîchissement.
+            refreshTokenRepository.revokeAllByUserId(userId);
+            throw new IllegalArgumentException("Account is disabled");
+        }
 
         stored.setRevokedAt(Instant.now());
         refreshTokenRepository.save(stored);

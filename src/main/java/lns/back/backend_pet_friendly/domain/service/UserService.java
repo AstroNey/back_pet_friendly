@@ -6,11 +6,11 @@ import lns.back.backend_pet_friendly.domain.port.in.UserUseCase;
 import lns.back.backend_pet_friendly.domain.port.out.FavoriteRepository;
 import lns.back.backend_pet_friendly.domain.port.out.FileStoragePort;
 import lns.back.backend_pet_friendly.domain.port.out.PlaceRepository;
+import lns.back.backend_pet_friendly.domain.port.out.RefreshTokenRepository;
 import lns.back.backend_pet_friendly.domain.port.out.ReviewRepository;
 import lns.back.backend_pet_friendly.domain.port.out.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -24,6 +24,7 @@ public class UserService implements UserUseCase {
     private final FavoriteRepository favoriteRepository;
     private final PlaceRepository placeRepository;
     private final FileStoragePort fileStoragePort;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     @Override
     public User getById(UUID id) {
@@ -60,7 +61,7 @@ public class UserService implements UserUseCase {
 
     @Override
     public Page<User> listAll(int page, int size) {
-        return userRepository.findAll(PageRequest.of(page, size));
+        return userRepository.findAll(Pagination.of(page, size));
     }
 
     @Override
@@ -69,7 +70,12 @@ public class UserService implements UserUseCase {
         if (cmd.name() != null)    user.setName(cmd.name());
         if (cmd.role() != null)    user.setRole(cmd.role());
         if (cmd.enabled() != null) user.setEnabled(cmd.enabled());
-        return userRepository.save(user);
+        User saved = userRepository.save(user);
+        // Bannissement : invalider immédiatement les refresh tokens actifs du compte.
+        if (Boolean.FALSE.equals(cmd.enabled())) {
+            refreshTokenRepository.revokeAllByUserId(id);
+        }
+        return saved;
     }
 
     @Override

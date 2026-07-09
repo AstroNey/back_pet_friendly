@@ -6,7 +6,6 @@ import lns.back.backend_pet_friendly.domain.port.out.FileStoragePort;
 import lns.back.backend_pet_friendly.domain.port.out.PlaceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
@@ -24,7 +23,7 @@ public class PlaceService implements PlaceUseCase {
 
     @Override
     public Page<Place> list(int page, int size) {
-        return placeRepository.findAll(PageRequest.of(page, size));
+        return placeRepository.findAll(Pagination.of(page, size));
     }
 
     @Override

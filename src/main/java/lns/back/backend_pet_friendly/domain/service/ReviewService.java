@@ -11,7 +11,6 @@ import lns.back.backend_pet_friendly.domain.port.out.ReviewRepository;
 import lns.back.backend_pet_friendly.domain.port.out.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -29,13 +28,13 @@ public class ReviewService implements ReviewUseCase {
 
     @Override
     public Page<Review> getByPlace(UUID placeId, int page, int size) {
-        var pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        var pageable = Pagination.of(page, size, Sort.by("createdAt").descending());
         return reviewRepository.findApprovedByPlaceId(placeId, pageable);
     }
 
     @Override
     public Page<Review> getByAuthor(UUID authorId, int page, int size) {
-        var pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        var pageable = Pagination.of(page, size, Sort.by("createdAt").descending());
         return reviewRepository.findByAuthorId(authorId, pageable);
     }
 
@@ -97,7 +96,7 @@ public class ReviewService implements ReviewUseCase {
 
     @Override
     public Page<Review> getByStatus(ReviewStatus status, int page, int size) {
-        var pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        var pageable = Pagination.of(page, size, Sort.by("createdAt").descending());
         Page<Review> reviews = reviewRepository.findByStatus(status, pageable);
         reviews.forEach(this::enrichPlaceName);
         return reviews;

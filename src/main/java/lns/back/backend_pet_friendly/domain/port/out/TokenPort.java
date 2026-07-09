@@ -7,4 +7,6 @@ public interface TokenPort {
     String generateRefreshToken(UUID userId);
     UUID extractUserId(String token);
     boolean isValid(String token);
+    /** Vérifie signature + expiration ET que le token est bien un access token (claim type=access). */
+    boolean isValidAccessToken(String token);
 }
