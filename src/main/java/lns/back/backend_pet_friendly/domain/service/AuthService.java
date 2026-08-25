@@ -150,7 +150,7 @@ public class AuthService implements AuthUseCase {
                 .build());
 
         // TODO: brancher un vrai envoi email (SMTP) — MVP : lien loggé pour test manuel en dev.
-        log.info("[password-reset] lien pour {} : /reset-password?token={}", email, rawToken);
+        log.info("[password-reset] lien pour {} : petfriendly://reset-password?token={}", email, rawToken);
     }
 
     @Override
