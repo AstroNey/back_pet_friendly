@@ -14,4 +14,9 @@ public interface AuthUseCase {
     AuthResult login(String email, String password);
     AuthResult refresh(String refreshToken);
     void logout(String refreshToken);
+
+    /** Génère un token de reset et le logge (pas d'envoi email en MVP). Toujours silencieux côté API (anti-énumération). */
+    void forgotPassword(String email);
+
+    void resetPassword(String token, String newPassword);
 }

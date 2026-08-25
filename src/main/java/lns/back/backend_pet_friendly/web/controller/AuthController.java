@@ -5,9 +5,11 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lns.back.backend_pet_friendly.domain.port.in.AuthUseCase;
+import lns.back.backend_pet_friendly.web.dto.request.ForgotPasswordRequest;
 import lns.back.backend_pet_friendly.web.dto.request.LoginRequest;
 import lns.back.backend_pet_friendly.web.dto.request.RefreshTokenRequest;
 import lns.back.backend_pet_friendly.web.dto.request.RegisterRequest;
+import lns.back.backend_pet_friendly.web.dto.request.ResetPasswordRequest;
 import lns.back.backend_pet_friendly.web.dto.response.AuthResponse;
 import lns.back.backend_pet_friendly.web.dto.response.UserResponse;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +45,20 @@ public class AuthController {
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequest req) {
         authUseCase.logout(req.refreshToken());
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Mot de passe oublié", description = "Génère un lien de reset si l'email existe. Réponse toujours générique (anti-énumération). MVP: pas d'envoi email réel, le lien est loggé côté serveur.")
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest req) {
+        authUseCase.forgotPassword(req.email());
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Réinitialiser le mot de passe", description = "Valide le token reçu et met à jour le mot de passe. Invalide toutes les sessions existantes.")
+    @PostMapping("/reset-password")
+    public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest req) {
+        authUseCase.resetPassword(req.token(), req.newPassword());
         return ResponseEntity.noContent().build();
     }
 

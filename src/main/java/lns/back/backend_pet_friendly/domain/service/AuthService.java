@@ -1,19 +1,25 @@
 package lns.back.backend_pet_friendly.domain.service;
 
+import lns.back.backend_pet_friendly.domain.model.PasswordResetToken;
 import lns.back.backend_pet_friendly.domain.model.RefreshToken;
 import lns.back.backend_pet_friendly.domain.model.User;
 import lns.back.backend_pet_friendly.domain.port.in.AuthUseCase;
+import lns.back.backend_pet_friendly.domain.port.out.PasswordResetTokenRepository;
 import lns.back.backend_pet_friendly.domain.port.out.RefreshTokenRepository;
 import lns.back.backend_pet_friendly.domain.port.out.TokenPort;
 import lns.back.backend_pet_friendly.domain.port.out.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.UUID;
 
 @Service
@@ -23,9 +29,14 @@ public class AuthService implements AuthUseCase {
 
     private static final long ACCESS_TOKEN_TTL_SECONDS = 900L;
     private static final int REFRESH_TOKEN_TTL_DAYS = 7;
+    private static final int RESET_TOKEN_TTL_MINUTES = 60;
+
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
+    private static final SecureRandom RANDOM = new SecureRandom();
 
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final TokenPort tokenPort;
 
@@ -113,6 +124,53 @@ public class AuthService implements AuthUseCase {
                 refreshTokenRepository.save(token);
             }
         });
+    }
+
+    /**
+     * Génère un token de reset et logge le lien (MVP sans envoi email réel).
+     * Silencieux si l'email est inconnu (anti-énumération) — l'appelant reçoit toujours un succès générique.
+     */
+    @Override
+    public void forgotPassword(String email) {
+        User user = userRepository.findByEmail(email).orElse(null);
+        if (user == null) return;
+
+        passwordResetTokenRepository.invalidateAllByUserId(user.getId());
+
+        byte[] bytes = new byte[32];
+        RANDOM.nextBytes(bytes);
+        String rawToken = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+
+        passwordResetTokenRepository.save(PasswordResetToken.builder()
+                .id(UUID.randomUUID())
+                .userId(user.getId())
+                .tokenHash(TokenHasher.sha256(rawToken))
+                .expiresAt(Instant.now().plus(RESET_TOKEN_TTL_MINUTES, ChronoUnit.MINUTES))
+                .createdAt(Instant.now())
+                .build());
+
+        // TODO: brancher un vrai envoi email (SMTP) — MVP : lien loggé pour test manuel en dev.
+        log.info("[password-reset] lien pour {} : /reset-password?token={}", email, rawToken);
+    }
+
+    @Override
+    public void resetPassword(String token, String newPassword) {
+        String hash = TokenHasher.sha256(token);
+        PasswordResetToken resetToken = passwordResetTokenRepository.findByTokenHash(hash)
+                .filter(PasswordResetToken::isValid)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid or expired reset token"));
+
+        if (!passwordResetTokenRepository.markUsedIfValid(hash, Instant.now())) {
+            throw new IllegalArgumentException("Invalid or expired reset token");
+        }
+
+        User user = userRepository.findById(resetToken.getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        // Sécurité : un reset de mot de passe invalide toutes les sessions existantes.
+        refreshTokenRepository.revokeAllByUserId(user.getId());
     }
 
     private AuthResult issueTokens(User user) {
